@@ -1,41 +1,44 @@
 /**
- * Resolves a logical data path to a GitHub Releases URL on sports-simulate-web.
+ * Resolves logical data paths to their actual CDN URLs via a manifest.
  *
- * All simulation data is stored as release assets (no data files in the repo).
- * Slashes in the logical path are replaced with underscores to produce a flat
- * asset name, and the season determines the release tag.
+ * publish_data.py uploads data files to GitHub Releases on sports-simulate-web,
+ * then follows each browser_download_url redirect to get the final
+ * objects.githubusercontent.com URL (which has Access-Control-Allow-Origin: *).
+ * It writes those resolved URLs to web/public/data-manifest.json, which is
+ * committed and served from the same origin as the app (CORS-free).
  *
- * Examples:
- *   dataUrl('cfb/2025/dates.json')
- *     → …/data-2025/cfb_2025_dates.json
- *
- *   dataUrl('cfb/2025/2025-11-16/B12_probabilities.json')
- *     → …/data-2025/cfb_2025_2025-11-16_B12_probabilities.json
- *
- *   dataUrl('cfb/2025/B12_timeline.json')
- *     → …/data-2025/cfb_2025_B12_timeline.json
- *
- *   dataUrl('index.json')
- *     → …/data-meta/index.json
- *
- * Upload convention (run by the weekly simulation job):
- *   gh release upload data-2025 cfb_2025_2025-11-16_B12_probabilities.json \
- *     --clobber --repo zuko7104/sports-simulate-web
+ * On first data fetch, the app loads data-manifest.json (same-origin, small),
+ * then resolves all subsequent requests through the CDN URLs in the manifest.
+ * If the manifest is missing or a path isn't listed, falls back to a relative
+ * URL under BASE_URL (works during local development).
  */
 
-const RELEASES_BASE =
-  'https://github.com/zuko7104/sports-simulate-web/releases/download';
+const MANIFEST_URL = `${import.meta.env.BASE_URL}data-manifest.json`;
 
-export function dataUrl(logicalPath: string): string {
-  const parts = logicalPath.split('/');
+let _manifest: Record<string, string> | null = null;
+let _loading: Promise<Record<string, string>> | null = null;
 
-  if (parts.length < 2) {
-    // Top-level files (e.g. index.json) go in the data-meta release.
-    return `${RELEASES_BASE}/data-meta/${logicalPath}`;
+export async function loadManifest(): Promise<Record<string, string>> {
+  if (_manifest) return _manifest;
+  if (!_loading) {
+    _loading = fetch(MANIFEST_URL)
+      .then(r => {
+        if (!r.ok) return {} as Record<string, string>;
+        const ct = r.headers.get('content-type');
+        if (!ct?.includes('application/json')) return {} as Record<string, string>;
+        return r.json() as Promise<Record<string, string>>;
+      })
+      .then(data => { _manifest = data; return data; })
+      .catch(() => { _manifest = {}; return _manifest!; });
   }
+  return _loading;
+}
 
-  // parts[1] is the season, e.g. '2025' from 'cfb/2025/...'
-  const season = parts[1];
-  const assetName = parts.join('_'); // 'cfb_2025_dates.json'
-  return `${RELEASES_BASE}/data-${season}/${assetName}`;
+/**
+ * Resolve a logical data path (e.g. 'cfb/2025/dates.json') to a URL.
+ * Uses the pre-loaded manifest; falls back to a relative path for local dev.
+ */
+export function resolveUrl(manifest: Record<string, string>, logicalPath: string): string {
+  return manifest[logicalPath] ?? `${import.meta.env.BASE_URL}data/${logicalPath}`;
+}
 }
