@@ -1,0 +1,55 @@
+# GitHub Actions workflow for the cfb-web deployment repo.
+#
+# This file lives at web/.github/workflows/pages.yml in the main repo
+# (zuko7104/cfb) and is rsynced into cfb-web/.github/workflows/pages.yml
+# by .github/workflows/deploy.yml on every push to main.
+#
+# Do not edit it in cfb-web directly — edit it in the main repo.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Allow manual re-deploy from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one concurrent deploy; skip queued runs but don't cancel in-progress ones.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

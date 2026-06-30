@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/* Custom styles */
+body {
+  @apply bg-gray-50 text-gray-900 min-h-screen m-0;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Team logo styling */
+.team-logo {
+  @apply w-8 h-8 object-contain;
+}
+
+.team-logo-sm {
+  @apply w-6 h-6 object-contain;
+}
+
+.team-logo-lg {
+  @apply w-12 h-12 object-contain;
+}
+
+/* Probability bar styling */
+.prob-bar {
+  @apply h-6 rounded transition-all duration-300;
+}
+
+/* Card styling */
+.card {
+  @apply bg-white rounded-lg shadow-md p-4;
+}
+
+.card-header {
+  @apply text-lg font-semibold mb-3 pb-2 border-b border-gray-200;
+}
