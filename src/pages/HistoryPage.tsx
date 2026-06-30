@@ -30,7 +30,7 @@ export function HistoryPage() {
       setError(null);
 
       try {
-        const res = await fetch(`/data/${sport}/${selectedSeason}/dates.json`);
+        const res = await fetch(`${import.meta.env.BASE_URL}data/${sport}/${selectedSeason}/dates.json`);
         if (!res.ok) {
           throw new Error('No historical data available');
         }

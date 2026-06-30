@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // base: '/' is correct when serving from a custom domain.
-  // Change to '/cfb-web/' temporarily if using the default GitLab Pages URL
-  // (NAMESPACE.gitlab.io/cfb-web) before the custom domain is configured.
-  base: '/',
+  // Set to '/sports-simulate-web/' for the default GitHub Pages URL.
+  // Switch back to '/' once a custom domain is configured.
+  base: '/sports-simulate-web/',
 })

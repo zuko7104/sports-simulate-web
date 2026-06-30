@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import type { DatesConfig } from '../utils/dateUtils';
 
-const BASE_URL = '/data';
+const BASE_URL = `${import.meta.env.BASE_URL}data`;
 
 interface UseConferenceDataResult {
   index: DataIndex | null;
