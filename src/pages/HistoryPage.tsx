@@ -4,6 +4,7 @@ import { useConferenceData } from '../hooks/useConferenceData';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { ConferenceSelector } from '../components/ConferenceSelector';
 import { dateToWeekLabel, type DatesConfig } from '../utils/dateUtils';
+import { dataUrl } from '../utils/dataUrl';
 
 const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
 
@@ -30,7 +31,7 @@ export function HistoryPage() {
       setError(null);
 
       try {
-        const res = await fetch(`${import.meta.env.BASE_URL}data/${sport}/${selectedSeason}/dates.json`);
+        const res = await fetch(dataUrl(`${sport}/${selectedSeason}/dates.json`));
         if (!res.ok) {
           throw new Error('No historical data available');
         }

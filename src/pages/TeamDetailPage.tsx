@@ -8,6 +8,7 @@ import { WeekImpactTable } from '../components/WeekImpactTable';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { type DatesConfig } from '../utils/dateUtils';
+import { dataUrl } from '../utils/dataUrl';
 import type {
   SeasonTeams,
   ConferenceProbabilities,
@@ -89,7 +90,7 @@ export function TeamDetailPage() {
 
       try {
         // Load teams.json to get team metadata
-        const teamsRes = await fetch(`${import.meta.env.BASE_URL}data/${sport}/${season}/teams.json`);
+        const teamsRes = await fetch(dataUrl(`${sport}/${season}/teams.json`));
         if (!teamsRes.ok) throw new Error('Failed to load team data');
         const teamsData: SeasonTeams = await teamsRes.json();
         setTeams(teamsData);
@@ -102,7 +103,7 @@ export function TeamDetailPage() {
         const conference = teamMeta.conference;
 
         // Load dates.json to get latest date
-        const datesRes = await fetch(`${import.meta.env.BASE_URL}data/${sport}/${season}/dates.json`);
+        const datesRes = await fetch(dataUrl(`${sport}/${season}/dates.json`));
         if (!datesRes.ok) throw new Error('Failed to load dates');
         const datesData: DatesConfig = await datesRes.json();
         setDatesConfig(datesData);
@@ -111,44 +112,34 @@ export function TeamDetailPage() {
         setCurrentDate(latestDate);
 
         // Load schedules.json
-        const BASE = `${import.meta.env.BASE_URL}data`;
-        const schedulesRes = await fetch(
-          `${BASE}/${sport}/${season}/${latestDate}/schedules.json`
-        );
+        const BASE = (path: string) => dataUrl(`${sport}/${season}/${path}`);
+        const schedulesRes = await fetch(BASE(`${latestDate}/schedules.json`));
         if (!schedulesRes.ok) throw new Error('Failed to load schedule data');
         const schedulesData: Schedules = await schedulesRes.json();
         setSchedules(schedulesData);
 
         // Load conference probabilities
-        const probsRes = await fetch(
-          `${BASE}/${sport}/${season}/${latestDate}/${conference}_probabilities.json`
-        );
+        const probsRes = await fetch(BASE(`${latestDate}/${conference}_probabilities.json`));
         if (!probsRes.ok) throw new Error('Failed to load probability data');
         const probsData: ConferenceProbabilities = await probsRes.json();
         setProbabilities(probsData);
 
         // Load CCG matchups
-        const matchupsRes = await fetch(
-          `${BASE}/${sport}/${season}/${latestDate}/${conference}_ccg_matchups.json`
-        );
+        const matchupsRes = await fetch(BASE(`${latestDate}/${conference}_ccg_matchups.json`));
         if (matchupsRes.ok) {
           const matchupsData: CCGMatchups = await matchupsRes.json();
           setMatchups(matchupsData);
         }
 
         // Load every outcome data (for per-game CCG probabilities)
-        const everyOutcomeRes = await fetch(
-          `${BASE}/${sport}/${season}/${latestDate}/${conference}_every_outcome.json`
-        );
+        const everyOutcomeRes = await fetch(BASE(`${latestDate}/${conference}_every_outcome.json`));
         if (everyOutcomeRes.ok) {
           const everyOutcomeData: EveryOutcome = await everyOutcomeRes.json();
           setEveryOutcome(everyOutcomeData);
         }
 
         // Load loss scenarios
-        const lossScenariosRes = await fetch(
-          `${BASE}/${sport}/${season}/${latestDate}/${conference}_loss_scenarios.json`
-        );
+        const lossScenariosRes = await fetch(BASE(`${latestDate}/${conference}_loss_scenarios.json`));
         if (lossScenariosRes.ok) {
           const ct = lossScenariosRes.headers.get('content-type');
           if (ct?.includes('application/json')) {
@@ -157,9 +148,7 @@ export function TeamDetailPage() {
         }
 
         // Load week impact
-        const weekImpactRes = await fetch(
-          `${BASE}/${sport}/${season}/${latestDate}/${conference}_week_impact.json`
-        );
+        const weekImpactRes = await fetch(BASE(`${latestDate}/${conference}_week_impact.json`));
         if (weekImpactRes.ok) {
           const ct = weekImpactRes.headers.get('content-type');
           if (ct?.includes('application/json')) {
@@ -168,9 +157,7 @@ export function TeamDetailPage() {
         }
 
         // Load probability timeline (season-level, not date-specific)
-        const timelineRes = await fetch(
-          `${BASE}/${sport}/${season}/${conference}_timeline.json`
-        );
+        const timelineRes = await fetch(BASE(`${conference}_timeline.json`));
         if (timelineRes.ok) {
           const ct = timelineRes.headers.get('content-type');
           if (ct?.includes('application/json')) {

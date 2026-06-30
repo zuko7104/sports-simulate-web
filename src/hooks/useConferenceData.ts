@@ -12,8 +12,7 @@ import type {
   TimelineData,
 } from '../types';
 import type { DatesConfig } from '../utils/dateUtils';
-
-const BASE_URL = `${import.meta.env.BASE_URL}data`;
+import { dataUrl } from '../utils/dataUrl';
 
 interface UseConferenceDataResult {
   index: DataIndex | null;
@@ -57,7 +56,7 @@ export function useConferenceData(): UseConferenceDataResult {
   useEffect(() => {
     async function loadIndex() {
       try {
-        const res = await fetch(`${BASE_URL}/index.json`);
+        const res = await fetch(dataUrl('index.json'));
         if (!res.ok) {
           // Index doesn't exist yet, that's okay
           return;
@@ -90,7 +89,7 @@ export function useConferenceData(): UseConferenceDataResult {
       // If no date provided, fetch the latest date from dates.json
       let datePath = date;
       if (!datePath) {
-        const datesRes = await fetch(`${BASE_URL}/${sport}/${season}/dates.json`);
+        const datesRes = await fetch(dataUrl(`${sport}/${season}/dates.json`));
         if (datesRes.ok) {
           const contentType = datesRes.headers.get('content-type');
           if (contentType?.includes('application/json')) {
@@ -103,7 +102,7 @@ export function useConferenceData(): UseConferenceDataResult {
         }
       } else {
         // Even when a specific date is requested, fetch dates.json to get metadata
-        const datesRes = await fetch(`${BASE_URL}/${sport}/${season}/dates.json`);
+        const datesRes = await fetch(dataUrl(`${sport}/${season}/dates.json`));
         if (datesRes.ok) {
           const contentType = datesRes.headers.get('content-type');
           if (contentType?.includes('application/json')) {
@@ -120,25 +119,23 @@ export function useConferenceData(): UseConferenceDataResult {
       }
 
       setCurrentDate(datePath);
-      const seasonPath = `${BASE_URL}/${sport}/${season}`;
-      const datePath_ = `${seasonPath}/${datePath}`;
 
       // Load all data in parallel
       // teams.json and schedules.json are at date level, other files are conference-specific
       const [teamsRes, schedulesRes, probsRes, matchupsRes, everyOutcomeRes] = await Promise.all([
-        fetch(`${seasonPath}/teams.json`),
-        fetch(`${datePath_}/schedules.json`),
-        fetch(`${datePath_}/${conference}_probabilities.json`),
-        fetch(`${datePath_}/${conference}_ccg_matchups.json`),
-        fetch(`${datePath_}/${conference}_every_outcome.json`).catch(() => null),
+        fetch(dataUrl(`${sport}/${season}/teams.json`)),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/schedules.json`)),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/${conference}_probabilities.json`)),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/${conference}_ccg_matchups.json`)),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/${conference}_every_outcome.json`)).catch(() => null),
       ]);
 
       // Also fetch optional data files in parallel
       const [weekImpactRes, tiebreakersRes, lossScenariosRes, timelineRes] = await Promise.all([
-        fetch(`${datePath_}/${conference}_week_impact.json`).catch(() => null),
-        fetch(`${datePath_}/${conference}_tiebreakers.json`).catch(() => null),
-        fetch(`${datePath_}/${conference}_loss_scenarios.json`).catch(() => null),
-        fetch(`${seasonPath}/${conference}_timeline.json`).catch(() => null),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/${conference}_week_impact.json`)).catch(() => null),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/${conference}_tiebreakers.json`)).catch(() => null),
+        fetch(dataUrl(`${sport}/${season}/${datePath}/${conference}_loss_scenarios.json`)).catch(() => null),
+        fetch(dataUrl(`${sport}/${season}/${conference}_timeline.json`)).catch(() => null),
       ]);
 
       if (!teamsRes.ok) throw new Error('Failed to load teams');
