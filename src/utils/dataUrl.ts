@@ -41,4 +41,3 @@ export async function loadManifest(): Promise<Record<string, string>> {
 export function resolveUrl(manifest: Record<string, string>, logicalPath: string): string {
   return manifest[logicalPath] ?? `${import.meta.env.BASE_URL}data/${logicalPath}`;
 }
-}
