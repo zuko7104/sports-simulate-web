@@ -12,7 +12,7 @@ export function TeamLogo({ team, size = 'md', className = '' }: TeamLogoProps) {
     lg: 'w-12 h-12',
   }[size];
 
-  const logoPath = `/assets/cfb/logos/${team.toLowerCase().replace(/ /g, '_')}.png`;
+  const logoPath = `${import.meta.env.BASE_URL}assets/cfb/logos/${team.toLowerCase().replace(/ /g, '_')}.png`;
 
   return (
     <img
@@ -21,7 +21,7 @@ export function TeamLogo({ team, size = 'md', className = '' }: TeamLogoProps) {
       className={`${sizeClass} object-contain ${className}`}
       onError={(e) => {
         // Fallback to a placeholder if logo doesn't exist
-        (e.target as HTMLImageElement).src = '/assets/cfb/logos/placeholder.png';
+        (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}assets/cfb/logos/placeholder.png`;
       }}
     />
   );
