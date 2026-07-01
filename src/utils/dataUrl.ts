@@ -1,43 +1,25 @@
 /**
- * Resolves logical data paths to their actual CDN URLs via a manifest.
+ * Resolves a logical data path to a URL.
  *
- * publish_data.py uploads data files to GitHub Releases on sports-simulate-web,
- * then follows each browser_download_url redirect to get the final
- * objects.githubusercontent.com URL (which has Access-Control-Allow-Origin: *).
- * It writes those resolved URLs to web/public/data-manifest.json, which is
- * committed and served from the same origin as the app (CORS-free).
+ * In production, data is served from a Cloudflare R2 public bucket with CORS
+ * configured to allow requests from the GitHub Pages origin. This avoids the
+ * CORS restrictions on GitHub Release assets.
  *
- * On first data fetch, the app loads data-manifest.json (same-origin, small),
- * then resolves all subsequent requests through the CDN URLs in the manifest.
- * If the manifest is missing or a path isn't listed, falls back to a relative
- * URL under BASE_URL (works during local development).
+ * publish_data.py syncs web/public/data/ to the R2 bucket via rclone
+ * (excluding every_outcome.json which is too large).
+ *
+ * The R2_BASE_URL Vite env var is set at build time by sports-simulate-web's
+ * GitHub Actions workflow. Falls back to same-origin /data/ for local dev.
+ *
+ * Set in sports-simulate-web/.github/workflows/pages.yml:
+ *   env:
+ *     VITE_R2_BASE_URL: https://pub-xxxx.r2.dev  # sports-simulate-data bucket
  */
 
-const MANIFEST_URL = `${import.meta.env.BASE_URL}data-manifest.json`;
+const R2_BASE =
+  (import.meta.env.VITE_R2_BASE_URL as string | undefined)?.replace(/\/$/, '') ??
+  `${import.meta.env.BASE_URL}data`;
 
-let _manifest: Record<string, string> | null = null;
-let _loading: Promise<Record<string, string>> | null = null;
-
-export async function loadManifest(): Promise<Record<string, string>> {
-  if (_manifest) return _manifest;
-  if (!_loading) {
-    _loading = fetch(MANIFEST_URL)
-      .then(r => {
-        if (!r.ok) return {} as Record<string, string>;
-        const ct = r.headers.get('content-type');
-        if (!ct?.includes('application/json')) return {} as Record<string, string>;
-        return r.json() as Promise<Record<string, string>>;
-      })
-      .then(data => { _manifest = data; return data; })
-      .catch(() => { _manifest = {}; return _manifest!; });
-  }
-  return _loading;
-}
-
-/**
- * Resolve a logical data path (e.g. 'cfb/2025/dates.json') to a URL.
- * Uses the pre-loaded manifest; falls back to a relative path for local dev.
- */
-export function resolveUrl(manifest: Record<string, string>, logicalPath: string): string {
-  return manifest[logicalPath] ?? `${import.meta.env.BASE_URL}data/${logicalPath}`;
+export function dataUrl(logicalPath: string): string {
+  return `${R2_BASE}/${logicalPath}`;
 }

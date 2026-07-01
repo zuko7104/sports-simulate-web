@@ -12,7 +12,7 @@ import type {
   TimelineData,
 } from '../types';
 import type { DatesConfig } from '../utils/dateUtils';
-import { loadManifest, resolveUrl } from '../utils/dataUrl';
+import { dataUrl } from '../utils/dataUrl';
 
 interface UseConferenceDataResult {
   index: DataIndex | null;
@@ -56,7 +56,7 @@ export function useConferenceData(): UseConferenceDataResult {
   useEffect(() => {
     async function loadIndex() {
       try {
-        const res = await fetch(resolveUrl(await loadManifest(), 'index.json'));
+        const res = await fetch(dataUrl('index.json'));
         if (!res.ok) {
           // Index doesn't exist yet, that's okay
           return;
@@ -86,8 +86,7 @@ export function useConferenceData(): UseConferenceDataResult {
     setError(null);
 
     try {
-      const manifest = await loadManifest();
-      const r = (path: string) => resolveUrl(manifest, path);
+      const r = dataUrl;
 
       // If no date provided, fetch the latest date from dates.json
       let datePath = date;

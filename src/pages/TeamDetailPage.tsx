@@ -8,7 +8,7 @@ import { WeekImpactTable } from '../components/WeekImpactTable';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { type DatesConfig } from '../utils/dateUtils';
-import { loadManifest, resolveUrl } from '../utils/dataUrl';
+import { dataUrl } from '../utils/dataUrl';
 import type {
   SeasonTeams,
   ConferenceProbabilities,
@@ -90,8 +90,7 @@ export function TeamDetailPage() {
 
       try {
         // Load teams.json to get team metadata
-        const manifest = await loadManifest();
-        const r = (path: string) => resolveUrl(manifest, path);
+        const r = dataUrl;
 
         const teamsRes = await fetch(r(`${sport}/${season}/teams.json`));
         if (!teamsRes.ok) throw new Error('Failed to load team data');
@@ -106,7 +105,7 @@ export function TeamDetailPage() {
         const conference = teamMeta.conference;
 
         // Load dates.json to get latest date
-        const datesRes = await fetch(r(`${sport}/${season}/dates.json`));
+        const datesRes = await fetch(dataUrl(`${sport}/${season}/dates.json`));
         if (!datesRes.ok) throw new Error('Failed to load dates');
         const datesData: DatesConfig = await datesRes.json();
         setDatesConfig(datesData);
@@ -115,7 +114,7 @@ export function TeamDetailPage() {
         setCurrentDate(latestDate);
 
         // Load schedules.json
-        const BASE = (path: string) => r(`${sport}/${season}/${path}`);
+        const BASE = (path: string) => dataUrl(`${sport}/${season}/${path}`);
         const schedulesRes = await fetch(BASE(`${latestDate}/schedules.json`));
         if (!schedulesRes.ok) throw new Error('Failed to load schedule data');
         const schedulesData: Schedules = await schedulesRes.json();

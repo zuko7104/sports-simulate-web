@@ -44,6 +44,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # R2 public bucket URL — set as a repository variable in sports-simulate-web.
+          # Settings → Variables → Actions → New repository variable
+          # Name: VITE_R2_BASE_URL  Value: https://pub-xxxx.r2.dev (sports-simulate-data bucket)
+          VITE_R2_BASE_URL: ${{ vars.VITE_R2_BASE_URL }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
