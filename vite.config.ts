@@ -8,5 +8,5 @@ export default defineConfig({
   // base: '/' is correct when serving from a custom domain.
   // Set to '/sports-simulate-web/' for the default GitHub Pages URL.
   // Switch back to '/' once a custom domain is configured.
-  base: '/sports-simulate-web/',
+  base: '/',
 })
