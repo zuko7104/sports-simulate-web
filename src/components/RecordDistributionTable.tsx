@@ -128,7 +128,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
 
   return (
     <div className="card">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="card-header mb-0">Final Record Distribution</h2>
           <p className="text-sm text-gray-600 mt-1">

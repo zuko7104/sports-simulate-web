@@ -73,15 +73,11 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
   const xTicks = dates.filter((_, i) => i % xTickInterval === 0 || i === dates.length - 1);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        CCG Probability Over Time
-      </h3>
+    <div>
       <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
           className="w-full"
-          style={{ minWidth: 600 }}
         >
           {/* Grid lines */}
           {yTicks.map(tick => (

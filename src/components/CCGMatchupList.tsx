@@ -1,6 +1,7 @@
 import { TeamLogo } from './TeamLogo';
 import type { CCGMatchups, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
+import { shortTeamName } from '../utils/teamNames';
 
 interface CCGMatchupListProps {
   matchups: CCGMatchups;
@@ -41,25 +42,27 @@ export function CCGMatchupList({ matchups, teams, limit = 15 }: CCGMatchupListPr
                 }}
               />
               {/* Content */}
-              <div className="relative flex items-center gap-3 p-2.5 hover:bg-gray-50/50">
-                <span className="text-gray-400 w-6 text-right text-sm font-mono">{idx + 1}</span>
+              <div className="relative flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2.5 hover:bg-gray-50/50">
+                <span className="text-gray-400 w-5 sm:w-6 text-right text-sm font-mono">{idx + 1}</span>
 
-                <span className="font-mono w-14 text-sm font-semibold tabular-nums">
+                <span className="font-mono w-12 sm:w-14 text-sm font-semibold tabular-nums">
                   {percentage}
                 </span>
 
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                   <TeamLogo team={matchup.team_a} size="sm" />
                   <span className="font-medium text-sm truncate">
-                    {teamA?.display_name ?? matchup.team_a}
+                    <span className="hidden sm:inline">{teamA?.display_name ?? matchup.team_a}</span>
+                    <span className="sm:hidden">{shortTeamName(teamA?.display_name ?? matchup.team_a)}</span>
                   </span>
                 </div>
 
                 <span className="text-gray-400 text-xs font-medium">vs</span>
 
-                <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 justify-end">
                   <span className="font-medium text-sm truncate text-right">
-                    {teamB?.display_name ?? matchup.team_b}
+                    <span className="hidden sm:inline">{teamB?.display_name ?? matchup.team_b}</span>
+                    <span className="sm:hidden">{shortTeamName(teamB?.display_name ?? matchup.team_b)}</span>
                   </span>
                   <TeamLogo team={matchup.team_b} size="sm" />
                 </div>

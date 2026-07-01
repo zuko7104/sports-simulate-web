@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogo } from './TeamLogo';
 import type { WeekImpact, SeasonTeams } from '../types';
+import { shortTeamName } from '../utils/teamNames';
 
 interface WeekImpactTableProps {
   weekImpact: WeekImpact;
@@ -82,7 +83,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
 
       {/* Per-game impact table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[380px]">
           <thead>
             <tr className="border-b border-gray-200">
               <th className="text-left py-2 px-2">Game</th>
@@ -107,22 +108,24 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
               const isHighlighted = hoveredTeam === game.away_team || hoveredTeam === game.home_team;
               return (
               <tr key={i} className={`border-b border-gray-100 transition-colors ${isHighlighted ? 'bg-yellow-100' : ''}`}>
-                <td className="py-2 px-2">
-                  <div className="flex items-center gap-1.5">
+                <td className="py-2 px-1 sm:px-2">
+                  <div className="flex items-center gap-1">
                     <TeamLogo team={game.away_team} size="xs" />
                     <Link
                       to={`/${conference ?? teams.teams[game.away_team]?.conference ?? 'B12'}/teams/${encodeURIComponent(game.away_team)}${historicalDate ? `?date=${historicalDate}` : ''}`}
-                      className="text-sm hover:text-blue-600 hover:underline"
+                      className="text-xs sm:text-sm hover:text-blue-600 hover:underline whitespace-nowrap"
                     >
-                      {teams.teams[game.away_team]?.display_name ?? game.away_team}
+                      <span className="hidden sm:inline">{teams.teams[game.away_team]?.display_name ?? game.away_team}</span>
+                      <span className="sm:hidden">{shortTeamName(teams.teams[game.away_team]?.display_name ?? game.away_team)}</span>
                     </Link>
                     <span className="text-xs text-gray-400">@</span>
                     <TeamLogo team={game.home_team} size="xs" />
                     <Link
                       to={`/${conference ?? teams.teams[game.home_team]?.conference ?? 'B12'}/teams/${encodeURIComponent(game.home_team)}${historicalDate ? `?date=${historicalDate}` : ''}`}
-                      className="text-sm hover:text-blue-600 hover:underline"
+                      className="text-xs sm:text-sm hover:text-blue-600 hover:underline whitespace-nowrap"
                     >
-                      {teams.teams[game.home_team]?.display_name ?? game.home_team}
+                      <span className="hidden sm:inline">{teams.teams[game.home_team]?.display_name ?? game.home_team}</span>
+                      <span className="sm:hidden">{shortTeamName(teams.teams[game.home_team]?.display_name ?? game.home_team)}</span>
                     </Link>
                   </div>
                 </td>

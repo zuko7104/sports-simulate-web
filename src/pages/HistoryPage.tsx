@@ -92,7 +92,8 @@ export function HistoryPage() {
 
       {/* Probability Timeline Chart */}
       {timeline && teams && (
-        <div className="mb-6">
+        <div className="mb-6 card">
+          <h2 className="card-header">CCG Probability Over Time</h2>
           <ProbabilityTimeline timeline={timeline} teams={teams} datesConfig={datesData} />
         </div>
       )}

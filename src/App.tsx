@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useParams, useLocation, Navigate } from 'react-router-dom';
 import { ConferenceDashboard } from './pages/ConferenceDashboard';
 import { WhatIfExplorer } from './pages/WhatIfExplorer';
@@ -10,56 +11,80 @@ import './index.css';
 function Navigation() {
   const { conference } = useParams<{ conference?: string }>();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Extract conference from URL path segments like /:conference, /:conference/what-if, etc.
   const pathConference = location.pathname.split('/')[1];
   const activeConference = conference || (['B12', 'SEC', 'B10', 'ACC'].includes(pathConference) ? pathConference : null);
 
+  const navLinks = activeConference
+    ? [
+        { to: `/${activeConference}`, label: 'Dashboard' },
+        { to: `/${activeConference}/what-if`, label: 'What-If' },
+        { to: `/${activeConference}/tiebreakers`, label: 'Tiebreakers' },
+        { to: `/${activeConference}/history`, label: 'History' },
+      ]
+    : [];
+
   return (
     <nav className="bg-gray-800 text-white">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="text-xl font-bold">
+          <Link to="/" className="text-xl font-bold" onClick={() => setMenuOpen(false)}>
             🏈 CFB Probabilities
           </Link>
           {activeConference && (
-            <div className="flex space-x-4">
-              <Link
-                to={`/${activeConference}`}
-                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
-                  location.pathname === `/${activeConference}` ? 'bg-gray-700' : ''
-                }`}
+            <>
+              {/* Desktop nav */}
+              <div className="hidden sm:flex space-x-4">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
+                      location.pathname === link.to ? 'bg-gray-700' : ''
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              {/* Mobile hamburger button */}
+              <button
+                className="sm:hidden p-2 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Toggle navigation menu"
+                aria-expanded={menuOpen}
               >
-                Dashboard
-              </Link>
-              <Link
-                to={`/${activeConference}/what-if`}
-                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
-                  location.pathname === `/${activeConference}/what-if` ? 'bg-gray-700' : ''
-                }`}
-              >
-                What-If
-              </Link>
-              <Link
-                to={`/${activeConference}/tiebreakers`}
-                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
-                  location.pathname === `/${activeConference}/tiebreakers` ? 'bg-gray-700' : ''
-                }`}
-              >
-                Tiebreakers
-              </Link>
-              <Link
-                to={`/${activeConference}/history`}
-                className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
-                  location.pathname === `/${activeConference}/history` ? 'bg-gray-700' : ''
-                }`}
-              >
-                History
-              </Link>
-            </div>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {menuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </>
           )}
         </div>
       </div>
+      {/* Mobile dropdown menu */}
+      {menuOpen && activeConference && (
+        <div className="sm:hidden border-t border-gray-700 px-4 pb-3">
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={() => setMenuOpen(false)}
+              className={`block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 mt-1 ${
+                location.pathname === link.to ? 'bg-gray-700' : ''
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </nav>
   );
 }

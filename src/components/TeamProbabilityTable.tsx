@@ -75,7 +75,7 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
     <div className="card">
       <h2 className="card-header">Conference Standings</h2>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[500px]">
           <thead>
             <tr className="border-b border-gray-200">
               <th className="text-center py-2 px-2 w-8">#</th>

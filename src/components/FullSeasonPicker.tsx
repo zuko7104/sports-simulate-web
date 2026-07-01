@@ -84,8 +84,10 @@ export function FullSeasonPicker({
   const selectedCount = Object.keys(selectedWinners).length;
   const totalGames = remainingGames.length;
   const weekGroups = useMemo(() => groupGamesByWeek(remainingGames, week1Start), [remainingGames, week1Start]);
+  const showFloatingCCG = allGamesSelected && tiebreakerResult?.ccgParticipants != null;
 
   return (
+    <div className={showFloatingCCG ? 'pb-20 md:pb-0' : ''}>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Column: Game Picker */}
       <div className="card">
@@ -376,6 +378,35 @@ export function FullSeasonPicker({
           </>
         ) : null}
       </div>
+    </div>
+
+      {/* Mobile floating CCG bar — appears at bottom when participants are determined */}
+      {showFloatingCCG && tiebreakerResult!.ccgParticipants && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-green-400 shadow-lg px-4 py-3">
+          <p className="text-xs text-center text-green-700 font-semibold mb-1.5">Conference Championship Game</p>
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <TeamLogo team={tiebreakerResult!.ccgParticipants[0]} size="sm" />
+              <Link
+                to={`/${conference}/teams/${encodeURIComponent(tiebreakerResult!.ccgParticipants[0])}`}
+                className="font-bold text-sm hover:underline"
+              >
+                {teams.teams[tiebreakerResult!.ccgParticipants[0]]?.display_name ?? tiebreakerResult!.ccgParticipants[0]}
+              </Link>
+            </div>
+            <span className="text-gray-400 font-light text-lg">vs</span>
+            <div className="flex items-center gap-1.5">
+              <TeamLogo team={tiebreakerResult!.ccgParticipants[1]} size="sm" />
+              <Link
+                to={`/${conference}/teams/${encodeURIComponent(tiebreakerResult!.ccgParticipants[1])}`}
+                className="font-bold text-sm hover:underline"
+              >
+                {teams.teams[tiebreakerResult!.ccgParticipants[1]]?.display_name ?? tiebreakerResult!.ccgParticipants[1]}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
