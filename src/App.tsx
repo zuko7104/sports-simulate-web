@@ -42,8 +42,13 @@ function Navigation() {
     <nav className="bg-gray-800 text-white">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to={sportYearPath()} className="text-xl font-bold" onClick={() => setMenuOpen(false)}>
-            🏈 CFB Probabilities
+          <Link
+            to={sportYearPath()}
+            className="flex items-center gap-2 text-xl font-bold"
+            onClick={() => setMenuOpen(false)}
+          >
+            <img src="/logo.png" alt="SportsSimulate logo" className="w-8 h-8" />
+            SportsSimulate
           </Link>
           {activeConference && (
             <>
@@ -156,7 +161,7 @@ function AppLayout() {
       </main>
       <footer className="bg-gray-800 text-gray-400 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm">
-          <p>College Football Championship Probability Simulator</p>
+          <p>College Football Season Results Simulator</p>
           <p className="mt-1">
             Data updated weekly • Simulations based on remaining schedules
           </p>
