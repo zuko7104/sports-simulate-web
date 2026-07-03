@@ -3,18 +3,22 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { ConferenceSelector } from '../components/ConferenceSelector';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { dateToWeekLabel, type DatesConfig } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath, conferenceSubPath } from '../utils/routes';
 
 const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
 
 export function HistoryPage() {
   const navigate = useNavigate();
-  const { conference = 'B12' } = useParams<{ conference: string }>();
-  const sport = 'cfb';
+  const {
+    sport = DEFAULT_SPORT,
+    year: selectedSeason = CURRENT_SEASON,
+    conference = 'B12',
+  } = useParams<{ sport: string; year: string; conference: string }>();
 
   const [datesData, setDatesData] = useState<DatesConfig | null>(null);
-  const [selectedSeason] = useState<string>('2025');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,17 +62,19 @@ export function HistoryPage() {
 
   const handleViewData = () => {
     if (selectedDate) {
-      navigate(`/${conference}?date=${selectedDate}`);
+      navigate(`${conferencePath(conference, sport, selectedSeason)}?date=${selectedDate}`);
     }
   };
 
   const handleConferenceChange = (conf: string) => {
-    navigate(`/${conf}/history`);
+    navigate(conferenceSubPath(conf, 'history', sport, selectedSeason));
   };
 
   const conferences = teams?.conferences
     ? Object.keys(teams.conferences)
     : DEFAULT_CONFERENCES;
+
+  usePageTitle(`${teams?.conferences?.[conference]?.display_name ?? conference} History`);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">

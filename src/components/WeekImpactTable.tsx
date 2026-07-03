@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { TeamLogo } from './TeamLogo';
 import type { WeekImpact, SeasonTeams } from '../types';
 import { shortTeamName } from '../utils/teamNames';
+import { teamPath } from '../utils/routes';
 
 interface WeekImpactTableProps {
   weekImpact: WeekImpact;
@@ -10,6 +11,8 @@ interface WeekImpactTableProps {
   selectedTeam?: string;
   showTeamSelector?: boolean;
   conference?: string;
+  sport?: string;
+  season?: string;
   historicalDate?: string;
 }
 
@@ -30,7 +33,7 @@ function impactColor(value: number): string {
   return 'text-gray-500';
 }
 
-export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelector = false, conference, historicalDate }: WeekImpactTableProps) {
+export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelector = false, conference, sport, season, historicalDate }: WeekImpactTableProps) {
   const teamNames = Object.keys(weekImpact.teams).sort(
     (a, b) => (weekImpact.teams[b].current_ccg_probability) - (weekImpact.teams[a].current_ccg_probability)
   );
@@ -112,7 +115,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                   <div className="flex items-center gap-1">
                     <TeamLogo team={game.away_team} size="xs" />
                     <Link
-                      to={`/${conference ?? teams.teams[game.away_team]?.conference ?? 'B12'}/teams/${encodeURIComponent(game.away_team)}${historicalDate ? `?date=${historicalDate}` : ''}`}
+                      to={`${teamPath(teams.teams[game.away_team]?.conference ?? conference ?? 'B12', game.away_team, sport, season)}${historicalDate ? `?date=${historicalDate}` : ''}`}
                       className="text-xs sm:text-sm hover:text-blue-600 hover:underline whitespace-nowrap"
                     >
                       <span className="hidden sm:inline">{teams.teams[game.away_team]?.display_name ?? game.away_team}</span>
@@ -121,7 +124,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                     <span className="text-xs text-gray-400">@</span>
                     <TeamLogo team={game.home_team} size="xs" />
                     <Link
-                      to={`/${conference ?? teams.teams[game.home_team]?.conference ?? 'B12'}/teams/${encodeURIComponent(game.home_team)}${historicalDate ? `?date=${historicalDate}` : ''}`}
+                      to={`${teamPath(teams.teams[game.home_team]?.conference ?? conference ?? 'B12', game.home_team, sport, season)}${historicalDate ? `?date=${historicalDate}` : ''}`}
                       className="text-xs sm:text-sm hover:text-blue-600 hover:underline whitespace-nowrap"
                     >
                       <span className="hidden sm:inline">{teams.teams[game.home_team]?.display_name ?? game.home_team}</span>

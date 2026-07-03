@@ -3,6 +3,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { TeamLogo } from '../components/TeamLogo';
 import { ConferenceSelector } from '../components/ConferenceSelector';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSubPath, teamPath } from '../utils/routes';
 
 const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
 
@@ -24,14 +26,18 @@ function ProbabilityBar({ value }: { value: number }) {
 }
 
 export function TiebreakersPage() {
-  const { conference = 'B12' } = useParams<{ conference: string }>();
+  const {
+    sport = DEFAULT_SPORT,
+    year = CURRENT_SEASON,
+    conference = 'B12',
+  } = useParams<{ sport: string; year: string; conference: string }>();
   const navigate = useNavigate();
   const { teams, tiebreakers, loading, error, loadConference } = useConferenceData();
   const [filterTeam, setFilterTeam] = useState<string>('');
 
   useEffect(() => {
-    loadConference('cfb', '2025', conference);
-  }, [conference, loadConference]);
+    loadConference(sport, year, conference);
+  }, [conference, sport, year, loadConference]);
 
   // Reset filter when conference changes
   useEffect(() => {
@@ -43,6 +49,7 @@ export function TiebreakersPage() {
     : DEFAULT_CONFERENCES;
 
   const conferenceName = teams?.conferences?.[conference]?.display_name ?? conference;
+  usePageTitle(`${conferenceName} Tiebreakers`);
 
   // Determine conference games count from data
   const confGames = conference === 'ACC' ? 8 : 9;
@@ -77,7 +84,7 @@ export function TiebreakersPage() {
         <ConferenceSelector
           conferences={conferences}
           selected={conference}
-          onChange={(conf) => navigate(`/${conf}/tiebreakers`)}
+          onChange={(conf) => navigate(conferenceSubPath(conf, 'tiebreakers', sport, year))}
           conferenceNames={teams?.conferences}
         />
       </div>
@@ -176,7 +183,7 @@ export function TiebreakersPage() {
                                   {teamList.map(team => (
                                     <Link
                                       key={team}
-                                      to={`/${conference}/teams/${encodeURIComponent(team)}`}
+                                      to={teamPath(conference, team, sport, year)}
                                       className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded-md bg-gray-50 hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200"
                                     >
                                       <TeamLogo team={team} size="xs" />

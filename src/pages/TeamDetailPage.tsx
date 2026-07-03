@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TeamLogo } from '../components/TeamLogo';
 import { TeamSchedule } from '../components/TeamSchedule';
 import { RecordProbabilities } from '../components/RecordProbabilities';
@@ -9,6 +9,8 @@ import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { type DatesConfig } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath, teamPath } from '../utils/routes';
 import type {
   SeasonTeams,
   ConferenceProbabilities,
@@ -56,15 +58,21 @@ function shouldUseDarkText(bgColor: string): boolean {
 }
 
 export function TeamDetailPage() {
-  const { conference: urlConference, teamId } = useParams<{
+  const {
+    sport = DEFAULT_SPORT,
+    year: season = CURRENT_SEASON,
+    conference: urlConference,
+    teamId,
+  } = useParams<{
+    sport: string;
+    year: string;
     conference: string;
     teamId: string;
   }>();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const historicalDate = searchParams.get('date') ?? undefined;
 
-  const sport = 'cfb';
-  const season = '2025';
   const teamName = decodeURIComponent(teamId ?? '');
 
   const [teams, setTeams] = useState<SeasonTeams | null>(null);
@@ -176,6 +184,20 @@ export function TeamDetailPage() {
     loadData();
   }, [sport, season, teamName, historicalDate]);
 
+  // If the team's actual conference doesn't match the conference in the URL
+  // (e.g. we navigated here from an out-of-conference opponent link), fix up
+  // the URL to point at the correct conference without triggering a re-fetch.
+  useEffect(() => {
+    if (!teams || !teamName) return;
+    const actualConference = teams.teams[teamName]?.conference;
+    if (actualConference && actualConference !== urlConference) {
+      const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
+      navigate(`${teamPath(actualConference, teamName, sport, season)}${dateSuffix}`, { replace: true });
+    }
+  }, [teams, teamName, urlConference, sport, season, historicalDate, navigate]);
+
+  usePageTitle(teams?.teams[teamName]?.display_name ?? (teamName || null));
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -193,7 +215,7 @@ export function TeamDetailPage() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
           <strong>Error:</strong> {error ?? 'Failed to load data'}
         </div>
-        <Link to={`/${urlConference ?? 'B12'}`} className="text-blue-600 hover:underline mt-4 inline-block">
+        <Link to={conferencePath(urlConference ?? 'B12', sport, season)} className="text-blue-600 hover:underline mt-4 inline-block">
           ← Back to Dashboard
         </Link>
       </div>
@@ -213,7 +235,7 @@ export function TeamDetailPage() {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700">
           Team "{teamName}" not found in data.
         </div>
-        <Link to={`/${urlConference ?? 'B12'}`} className="text-blue-600 hover:underline mt-4 inline-block">
+        <Link to={conferencePath(urlConference ?? 'B12', sport, season)} className="text-blue-600 hover:underline mt-4 inline-block">
           ← Back to Dashboard
         </Link>
       </div>
@@ -304,7 +326,7 @@ export function TeamDetailPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <nav className="text-sm mb-6">
-        <Link to={`/${urlConference ?? 'B12'}${dateSuffix}`} className="text-blue-600 hover:underline">
+        <Link to={`${conferencePath(conference ?? urlConference ?? 'B12', sport, season)}${dateSuffix}`} className="text-blue-600 hover:underline">
           {conferenceMeta?.display_name ?? urlConference ?? 'Conference'}
         </Link>
         <span className="mx-2 text-gray-400">/</span>
@@ -332,7 +354,7 @@ export function TeamDetailPage() {
             <p className="text-sm text-gray-500 mt-1">
               Data from {currentDate}
               {latestDate && currentDate !== latestDate && (
-                <>{' · '}<Link to={`/${urlConference}/teams/${encodeURIComponent(teamName)}`} className="text-blue-600 hover:underline">View latest</Link></>
+                <>{' · '}<Link to={teamPath(conference ?? urlConference ?? 'B12', teamName, sport, season)} className="text-blue-600 hover:underline">View latest</Link></>
               )}
             </p>
           )}
@@ -433,7 +455,7 @@ export function TeamDetailPage() {
                 >
                   <div className="w-32 shrink-0 flex items-center gap-1.5 justify-end">
                     <Link
-                      to={`/${conference ?? urlConference}/teams/${encodeURIComponent(opponent)}${dateSuffix}`}
+                      to={`${teamPath(oppMeta?.conference ?? conference ?? urlConference ?? 'B12', opponent, sport, season)}${dateSuffix}`}
                       className="text-sm hover:text-blue-600 hover:underline truncate"
                     >
                       {oppMeta?.display_name ?? opponent}
@@ -471,6 +493,8 @@ export function TeamDetailPage() {
             teams={teams}
             selectedTeam={teamName}
             conference={conference ?? urlConference}
+            sport={sport}
+            season={season}
             historicalDate={historicalDate}
           />
         </div>

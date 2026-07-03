@@ -4,10 +4,13 @@ import { TeamLogo } from './TeamLogo';
 import { dateToWeekNumber } from '../utils/dateUtils';
 import type { SeasonTeams, TiebreakerResult, ConferenceState } from '../types';
 import type { RemainingGame } from '../utils/seasonBuilder';
+import { teamPath } from '../utils/routes';
 
 interface FullSeasonPickerProps {
   teams: SeasonTeams;
   conference: string;
+  sport?: string;
+  season?: string;
   conferenceState: ConferenceState | null;
   remainingGames: RemainingGame[];
   selectedWinners: Record<string, string>;
@@ -70,6 +73,8 @@ function groupGamesByWeek(games: RemainingGame[], week1Start?: string): WeekGrou
 export function FullSeasonPicker({
   teams,
   conference,
+  sport,
+  season,
   conferenceState,
   remainingGames,
   selectedWinners,
@@ -222,7 +227,7 @@ export function FullSeasonPicker({
                 <div className="flex items-center justify-center gap-6 py-6">
                   <div className="flex flex-col items-center gap-2">
                     <TeamLogo team={tiebreakerResult.ccgParticipants[0]} size="lg" />
-                    <Link to={`/${conference}/teams/${encodeURIComponent(tiebreakerResult.ccgParticipants[0])}`} className="font-bold text-lg hover:underline">
+                    <Link to={teamPath(conference, tiebreakerResult.ccgParticipants[0], sport, season)} className="font-bold text-lg hover:underline">
                       {teams.teams[tiebreakerResult.ccgParticipants[0]]?.display_name ?? tiebreakerResult.ccgParticipants[0]}
                     </Link>
                     <span className="text-xs text-gray-500">#1 Seed</span>
@@ -230,7 +235,7 @@ export function FullSeasonPicker({
                   <span className="text-gray-400 text-2xl font-light">vs</span>
                   <div className="flex flex-col items-center gap-2">
                     <TeamLogo team={tiebreakerResult.ccgParticipants[1]} size="lg" />
-                    <Link to={`/${conference}/teams/${encodeURIComponent(tiebreakerResult.ccgParticipants[1])}`} className="font-bold text-lg hover:underline">
+                    <Link to={teamPath(conference, tiebreakerResult.ccgParticipants[1], sport, season)} className="font-bold text-lg hover:underline">
                       {teams.teams[tiebreakerResult.ccgParticipants[1]]?.display_name ?? tiebreakerResult.ccgParticipants[1]}
                     </Link>
                     <span className="text-xs text-gray-500">#2 Seed</span>
@@ -285,7 +290,7 @@ export function FullSeasonPicker({
                             {isTied ? `T${rank}` : rank}.
                           </span>
                           <TeamLogo team={teamName} size="sm" />
-                          <Link to={`/${conference}/teams/${encodeURIComponent(teamName)}`} className={`flex-1 hover:underline ${isCCG ? 'font-semibold' : ''}`}>
+                          <Link to={teamPath(conference, teamName, sport, season)} className={`flex-1 hover:underline ${isCCG ? 'font-semibold' : ''}`}>
                             {teamMeta?.display_name ?? teamName}
                           </Link>
                           {confRecord && (
@@ -388,7 +393,7 @@ export function FullSeasonPicker({
             <div className="flex items-center gap-1.5">
               <TeamLogo team={tiebreakerResult!.ccgParticipants[0]} size="sm" />
               <Link
-                to={`/${conference}/teams/${encodeURIComponent(tiebreakerResult!.ccgParticipants[0])}`}
+                to={teamPath(conference, tiebreakerResult!.ccgParticipants[0], sport, season)}
                 className="font-bold text-sm hover:underline"
               >
                 {teams.teams[tiebreakerResult!.ccgParticipants[0]]?.display_name ?? tiebreakerResult!.ccgParticipants[0]}
@@ -398,7 +403,7 @@ export function FullSeasonPicker({
             <div className="flex items-center gap-1.5">
               <TeamLogo team={tiebreakerResult!.ccgParticipants[1]} size="sm" />
               <Link
-                to={`/${conference}/teams/${encodeURIComponent(tiebreakerResult!.ccgParticipants[1])}`}
+                to={teamPath(conference, tiebreakerResult!.ccgParticipants[1], sport, season)}
                 className="font-bold text-sm hover:underline"
               >
                 {teams.teams[tiebreakerResult!.ccgParticipants[1]]?.display_name ?? tiebreakerResult!.ccgParticipants[1]}

@@ -4,6 +4,7 @@ import { formatProbability } from '../utils/formatProbability';
 import { TeamLogo } from './TeamLogo';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { isConferenceGame } from '../utils/conferenceGame';
+import { teamPath } from '../utils/routes';
 
 interface TeamProbabilityTableProps {
   probabilities: ConferenceProbabilities;
@@ -15,7 +16,7 @@ interface TeamProbabilityTableProps {
   historicalDate?: string;
 }
 
-export function TeamProbabilityTable({ probabilities, teams, schedules, conference: conferenceProp, season = '2025', historicalDate }: TeamProbabilityTableProps) {
+export function TeamProbabilityTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season = '2025', historicalDate }: TeamProbabilityTableProps) {
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conference = conferenceProp ?? probabilities.conference;
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
@@ -98,7 +99,7 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
                   </td>
                   <td className="py-2 px-3">
                     <Link
-                      to={`/${conference ?? probabilities.conference}/teams/${encodeURIComponent(team.teamName)}${dateSuffix}`}
+                      to={`${teamPath(conference, team.teamName, sport, season)}${dateSuffix}`}
                       className="flex items-center gap-2 hover:text-blue-600"
                     >
                       <TeamLogo team={team.teamName} size="sm" />

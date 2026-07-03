@@ -1,28 +1,40 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useParams, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useParams, useSearchParams, Navigate } from 'react-router-dom';
 import { ConferenceDashboard } from './pages/ConferenceDashboard';
 import { WhatIfExplorer } from './pages/WhatIfExplorer';
 import { TiebreakersPage } from './pages/TiebreakersPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { TeamDetailPage } from './pages/TeamDetailPage';
 import { ConferenceLanding } from './pages/ConferenceLanding';
+import {
+  DEFAULT_SPORT,
+  KNOWN_CONFERENCES,
+  sportYearPath,
+  conferencePath,
+  conferenceSubPath,
+  teamPath,
+} from './utils/routes';
 import './index.css';
 
 function Navigation() {
-  const { conference } = useParams<{ conference?: string }>();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Extract conference from URL path segments like /:conference, /:conference/what-if, etc.
-  const pathConference = location.pathname.split('/')[1];
-  const activeConference = conference || (['B12', 'SEC', 'B10', 'ACC'].includes(pathConference) ? pathConference : null);
+  // Parse /:sport/:year/:conference/... directly from the path so this works
+  // regardless of which nested route rendered (Navigation lives outside the
+  // inner <Routes>, so useParams here won't see route-specific params).
+  const [, sport, year, maybeConference] = location.pathname.split('/');
+  const activeConference =
+    sport === DEFAULT_SPORT && year && maybeConference && KNOWN_CONFERENCES.includes(maybeConference)
+      ? maybeConference
+      : null;
 
   const navLinks = activeConference
     ? [
-        { to: `/${activeConference}`, label: 'Dashboard' },
-        { to: `/${activeConference}/what-if`, label: 'What-If' },
-        { to: `/${activeConference}/tiebreakers`, label: 'Tiebreakers' },
-        { to: `/${activeConference}/history`, label: 'History' },
+        { to: conferencePath(activeConference, sport, year), label: 'Dashboard' },
+        { to: conferenceSubPath(activeConference, 'what-if', sport, year), label: 'What-If' },
+        { to: conferenceSubPath(activeConference, 'tiebreakers', sport, year), label: 'Tiebreakers' },
+        { to: conferenceSubPath(activeConference, 'history', sport, year), label: 'History' },
       ]
     : [];
 
@@ -30,7 +42,7 @@ function Navigation() {
     <nav className="bg-gray-800 text-white">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="text-xl font-bold" onClick={() => setMenuOpen(false)}>
+          <Link to={sportYearPath()} className="text-xl font-bold" onClick={() => setMenuOpen(false)}>
             🏈 CFB Probabilities
           </Link>
           {activeConference && (
@@ -89,22 +101,57 @@ function Navigation() {
   );
 }
 
+function LegacyConferenceRedirect() {
+  const { legacyConference } = useParams<{ legacyConference: string }>();
+  const [search] = useSearchParams();
+  if (!legacyConference || !KNOWN_CONFERENCES.includes(legacyConference)) {
+    return <Navigate to={sportYearPath()} replace />;
+  }
+  const qs = search.toString();
+  return <Navigate to={`${conferencePath(legacyConference)}${qs ? `?${qs}` : ''}`} replace />;
+}
+
+function LegacyConferenceSubRedirect({ sub }: { sub: 'what-if' | 'tiebreakers' | 'history' }) {
+  const { legacyConference } = useParams<{ legacyConference: string }>();
+  if (!legacyConference || !KNOWN_CONFERENCES.includes(legacyConference)) {
+    return <Navigate to={sportYearPath()} replace />;
+  }
+  return <Navigate to={conferenceSubPath(legacyConference, sub)} replace />;
+}
+
+function LegacyTeamRedirect() {
+  const { legacyConference, teamId } = useParams<{ legacyConference: string; teamId: string }>();
+  const [search] = useSearchParams();
+  if (!legacyConference || !teamId || !KNOWN_CONFERENCES.includes(legacyConference)) {
+    return <Navigate to={sportYearPath()} replace />;
+  }
+  const qs = search.toString();
+  return <Navigate to={`${teamPath(legacyConference, decodeURIComponent(teamId))}${qs ? `?${qs}` : ''}`} replace />;
+}
+
 function AppLayout() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navigation />
       <main>
         <Routes>
-          <Route path="/" element={<ConferenceLanding />} />
-          <Route path="/:conference" element={<ConferenceDashboard />} />
-          <Route path="/:conference/what-if" element={<WhatIfExplorer />} />
-          <Route path="/:conference/tiebreakers" element={<TiebreakersPage />} />
-          <Route path="/:conference/history" element={<HistoryPage />} />
-          <Route path="/:conference/teams/:teamId" element={<TeamDetailPage />} />
-          {/* Legacy routes redirect */}
-          <Route path="/what-if" element={<Navigate to="/B12/what-if" replace />} />
-          <Route path="/tiebreakers" element={<Navigate to="/B12/tiebreakers" replace />} />
-          <Route path="/history" element={<Navigate to="/B12/history" replace />} />
+          <Route path="/" element={<Navigate to={sportYearPath()} replace />} />
+          <Route path="/:sport/:year" element={<ConferenceLanding />} />
+          <Route path="/:sport/:year/:conference" element={<ConferenceDashboard />} />
+          <Route path="/:sport/:year/:conference/what-if" element={<WhatIfExplorer />} />
+          <Route path="/:sport/:year/:conference/tiebreakers" element={<TiebreakersPage />} />
+          <Route path="/:sport/:year/:conference/history" element={<HistoryPage />} />
+          <Route path="/:sport/:year/:conference/team/:teamId" element={<TeamDetailPage />} />
+
+          {/* Legacy routes (pre URL-restructure) redirect to the new /:sport/:year/... scheme */}
+          <Route path="/what-if" element={<Navigate to={conferenceSubPath('B12', 'what-if')} replace />} />
+          <Route path="/tiebreakers" element={<Navigate to={conferenceSubPath('B12', 'tiebreakers')} replace />} />
+          <Route path="/history" element={<Navigate to={conferenceSubPath('B12', 'history')} replace />} />
+          <Route path="/:legacyConference" element={<LegacyConferenceRedirect />} />
+          <Route path="/:legacyConference/what-if" element={<LegacyConferenceSubRedirect sub="what-if" />} />
+          <Route path="/:legacyConference/tiebreakers" element={<LegacyConferenceSubRedirect sub="tiebreakers" />} />
+          <Route path="/:legacyConference/history" element={<LegacyConferenceSubRedirect sub="history" />} />
+          <Route path="/:legacyConference/teams/:teamId" element={<LegacyTeamRedirect />} />
         </Routes>
       </main>
       <footer className="bg-gray-800 text-gray-400 py-6 mt-12">

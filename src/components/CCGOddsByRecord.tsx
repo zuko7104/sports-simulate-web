@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom';
 import { TeamLogo } from './TeamLogo';
 import type { ConferenceProbabilities, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
+import { teamPath } from '../utils/routes';
 
 interface CCGOddsByRecordProps {
   probabilities: ConferenceProbabilities;
   teams: SeasonTeams;
   conference?: string;
+  sport?: string;
+  season?: string;
   historicalDate?: string;
 }
 
@@ -23,7 +26,7 @@ function probTextColor(prob: number): string {
   return '#1f2937';
 }
 
-export function CCGOddsByRecord({ probabilities, teams, conference: conferenceProp, historicalDate }: CCGOddsByRecordProps) {
+export function CCGOddsByRecord({ probabilities, teams, conference: conferenceProp, sport, season, historicalDate }: CCGOddsByRecordProps) {
   const conference = conferenceProp ?? probabilities.conference;
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
@@ -89,7 +92,7 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
               <tr key={teamName} className="border-b border-gray-100">
                 <td className="py-1.5 px-2 sticky left-0 bg-white">
                   <Link
-                    to={`/${conference}/teams/${encodeURIComponent(teamName)}${dateSuffix}`}
+                    to={`${teamPath(conference, teamName, sport, season)}${dateSuffix}`}
                     className="flex items-center gap-1.5 hover:text-blue-600"
                   >
                     <TeamLogo team={teamName} size="xs" />

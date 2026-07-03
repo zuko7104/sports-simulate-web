@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { TeamLogo } from './TeamLogo';
 import { dateToWeekNumber } from '../utils/dateUtils';
 import type { SeasonTeams, ConferenceProbabilities, CCGMatchups } from '../types';
+import { teamPath } from '../utils/routes';
 
 interface GameInfo {
   gameKey: string;
@@ -21,6 +22,8 @@ interface AggregatedProbabilities {
 interface WhatIfPickerProps {
   teams: SeasonTeams;
   conference: string;
+  sport?: string;
+  season?: string;
   selectedWinners: Record<string, string>;
   onSelectWinner: (game: string, winner: string) => void;
   onClear: () => void;
@@ -126,6 +129,8 @@ function groupGamesByWeek(gameInfos: GameInfo[], week1Start?: string): WeekGroup
 export function WhatIfPicker({
   teams,
   conference,
+  sport,
+  season,
   selectedWinners,
   onSelectWinner,
   onClear,
@@ -302,7 +307,7 @@ export function WhatIfPicker({
                     return (
                       <div key={teamName} className="flex items-center gap-3">
                         <TeamLogo team={teamName} size="sm" />
-                        <Link to={`/${conference}/teams/${encodeURIComponent(teamName)}`} className="font-medium flex-1 hover:underline">
+                        <Link to={teamPath(conference, teamName, sport, season)} className="font-medium flex-1 hover:underline">
                           {teamMeta?.display_name ?? teamName}
                         </Link>
                         <span className="font-mono text-sm w-16 text-right">{percentage}%</span>
@@ -344,12 +349,12 @@ export function WhatIfPicker({
                           <td className="py-1.5 pr-2 text-gray-400 w-6 text-right">{idx + 1}.</td>
                           <td className="py-1.5 pr-1 w-6"><TeamLogo team={matchup.teams[0]} size="sm" /></td>
                           <td className="py-1.5 pr-2">
-                            <Link to={`/${conference}/teams/${encodeURIComponent(matchup.teams[0])}`} className="hover:underline">{teams.teams[matchup.teams[0]]?.display_name ?? matchup.teams[0]}</Link>
+                            <Link to={teamPath(conference, matchup.teams[0], sport, season)} className="hover:underline">{teams.teams[matchup.teams[0]]?.display_name ?? matchup.teams[0]}</Link>
                           </td>
                           <td className="py-1.5 px-2 text-gray-400 text-center">vs</td>
                           <td className="py-1.5 pr-1 w-6"><TeamLogo team={matchup.teams[1]} size="sm" /></td>
                           <td className="py-1.5 pr-2">
-                            <Link to={`/${conference}/teams/${encodeURIComponent(matchup.teams[1])}`} className="hover:underline">{teams.teams[matchup.teams[1]]?.display_name ?? matchup.teams[1]}</Link>
+                            <Link to={teamPath(conference, matchup.teams[1], sport, season)} className="hover:underline">{teams.teams[matchup.teams[1]]?.display_name ?? matchup.teams[1]}</Link>
                           </td>
                           <td className="py-1.5 font-mono text-right">
                             {(matchup.probability * 100).toFixed(1)}%

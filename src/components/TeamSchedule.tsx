@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { GameResult, SeasonTeams } from '../types';
 import { TeamLogo } from './TeamLogo';
+import { teamPath } from '../utils/routes';
 
 interface TeamScheduleProps {
   games: GameResult[];
@@ -11,7 +12,7 @@ interface TeamScheduleProps {
   historicalDate?: string;
 }
 
-export function TeamSchedule({ games, teams, conference, historicalDate }: TeamScheduleProps) {
+export function TeamSchedule({ games, teams, sport, season, conference, historicalDate }: TeamScheduleProps) {
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T12:00:00');
@@ -60,7 +61,7 @@ export function TeamSchedule({ games, teams, conference, historicalDate }: TeamS
                     </span>
                     <TeamLogo team={game.opponent} size="sm" />
                     <Link
-                      to={`/${conference ?? teams.teams[game.opponent]?.conference ?? 'B12'}/teams/${encodeURIComponent(game.opponent)}${dateSuffix}`}
+                      to={`${teamPath(opponentMeta?.conference ?? conference ?? 'B12', game.opponent, sport, season)}${dateSuffix}`}
                       className="text-sm hover:text-blue-600 hover:underline"
                     >
                       {opponentMeta?.display_name ?? game.opponent}

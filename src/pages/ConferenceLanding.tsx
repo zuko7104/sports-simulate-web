@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath, sportDisplayName } from '../utils/routes';
 
 const CONFERENCES = [
   { id: 'B12', name: 'Big 12', color: '#004B87' },
@@ -8,6 +10,9 @@ const CONFERENCES = [
 ];
 
 export function ConferenceLanding() {
+  const { sport = DEFAULT_SPORT, year = CURRENT_SEASON } = useParams<{ sport: string; year: string }>();
+  usePageTitle(`${sportDisplayName(sport)} ${year}`);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <header className="text-center mb-12">
@@ -23,7 +28,7 @@ export function ConferenceLanding() {
         {CONFERENCES.map((conf) => (
           <Link
             key={conf.id}
-            to={`/${conf.id}`}
+            to={conferencePath(conf.id, sport, year)}
             className="block p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow text-white text-center"
             style={{ backgroundColor: conf.color }}
           >

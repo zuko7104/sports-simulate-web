@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { TeamProbabilityTable } from '../components/TeamProbabilityTable';
 import { CCGMatchupList } from '../components/CCGMatchupList';
 import { ConferenceSelector } from '../components/ConferenceSelector';
@@ -8,17 +9,20 @@ import { CCGOddsByRecord } from '../components/CCGOddsByRecord';
 import { RecordDistributionTable } from '../components/RecordDistributionTable';
 import { WeekImpactTable } from '../components/WeekImpactTable';
 import { dateToWeekLabel } from '../utils/dateUtils';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath } from '../utils/routes';
 
 // Default conferences to show (will be replaced by data from index.json when available)
 const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
 
 export function ConferenceDashboard() {
-  const { conference: selectedConference = 'B12' } = useParams<{ conference: string }>();
+  const {
+    sport: selectedSport = DEFAULT_SPORT,
+    year: selectedSeason = CURRENT_SEASON,
+    conference: selectedConference = 'B12',
+  } = useParams<{ sport: string; year: string; conference: string }>();
   const [searchParams] = useSearchParams();
   const historicalDate = searchParams.get('date') ?? undefined;
   const navigate = useNavigate();
-  const selectedSport = 'cfb';
-  const selectedSeason = '2025';
 
   const { teams, schedules, probabilities, matchups, weekImpact, loading, error, currentDate, latestDate, datesConfig, loadConference } = useConferenceData();
 
@@ -30,15 +34,18 @@ export function ConferenceDashboard() {
     ? Object.keys(teams.conferences)
     : DEFAULT_CONFERENCES;
 
+  const conferenceDisplayName = teams?.conferences[selectedConference]?.display_name ?? selectedConference;
+  usePageTitle(conferenceDisplayName);
+
   const handleConferenceChange = (conf: string) => {
-    navigate(`/${conf}`);
+    navigate(conferencePath(conf, selectedSport, selectedSeason));
   };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {teams?.conferences[selectedConference]?.display_name ?? selectedConference} Championship Probabilities
+          {conferenceDisplayName} Championship Probabilities
         </h1>
         <p className="text-gray-600">
           Simulated probabilities for conference championship game appearances
@@ -61,7 +68,7 @@ export function ConferenceDashboard() {
             📅 Viewing historical data from <strong>{dateToWeekLabel(historicalDate, datesConfig?.week1_start, datesConfig?.dates)}</strong>
           </span>
           <Link
-            to={`/${selectedConference}`}
+            to={conferencePath(selectedConference, selectedSport, selectedSeason)}
             className="text-sm text-amber-700 hover:text-amber-900 underline"
           >
             Back to latest
@@ -102,7 +109,7 @@ export function ConferenceDashboard() {
 
           {weekImpact && (
             <div className="mt-6">
-              <WeekImpactTable weekImpact={weekImpact} teams={teams} showTeamSelector conference={selectedConference} historicalDate={historicalDate} />
+              <WeekImpactTable weekImpact={weekImpact} teams={teams} showTeamSelector conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} />
             </div>
           )}
 

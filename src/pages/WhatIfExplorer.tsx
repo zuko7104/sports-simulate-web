@@ -2,22 +2,26 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { useWhatIf } from '../hooks/useWhatIf';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { WhatIfPicker } from '../components/WhatIfPicker';
 import { FullSeasonPicker } from '../components/FullSeasonPicker';
 import { ConferenceSelector } from '../components/ConferenceSelector';
 import { getRemainingConferenceGames, buildConferenceState, fillWithFavorites, selectionProbability as calcSelectionProb } from '../utils/seasonBuilder';
 import { resolveChampionship } from '../utils/tiebreakers';
 import { dateToWeekNumber } from '../utils/dateUtils';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSubPath } from '../utils/routes';
 
 const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
 
 type Mode = 'next-weeks' | 'full-season';
 
 export function WhatIfExplorer() {
-  const { conference: selectedConference = 'B12' } = useParams<{ conference: string }>();
+  const {
+    sport: selectedSport = DEFAULT_SPORT,
+    year: selectedSeason = CURRENT_SEASON,
+    conference: selectedConference = 'B12',
+  } = useParams<{ sport: string; year: string; conference: string }>();
   const navigate = useNavigate();
-  const selectedSport = 'cfb';
-  const selectedSeason = '2025';
   const [mode, setMode] = useState<Mode>('next-weeks');
   const [selectedWinners, setSelectedWinners] = useState<Record<string, string>>({});
   const [fullSeasonWinners, setFullSeasonWinners] = useState<Record<string, string>>({});
@@ -52,8 +56,11 @@ export function WhatIfExplorer() {
     ? Object.keys(teams.conferences)
     : DEFAULT_CONFERENCES;
 
+  const conferenceDisplayName = teams?.conferences[selectedConference]?.display_name ?? selectedConference;
+  usePageTitle(`${conferenceDisplayName} What-If`);
+
   const handleConferenceChange = (conf: string) => {
-    navigate(`/${conf}/what-if`);
+    navigate(conferenceSubPath(conf, 'what-if', selectedSport, selectedSeason));
   };
 
   // Full-season mode data
@@ -177,6 +184,8 @@ export function WhatIfExplorer() {
             <WhatIfPicker
               teams={teams}
               conference={selectedConference}
+              sport={selectedSport}
+              season={selectedSeason}
               selectedWinners={selectedWinners}
               onSelectWinner={setWinner}
               onClear={clearSelections}
@@ -196,6 +205,8 @@ export function WhatIfExplorer() {
         <FullSeasonPicker
           teams={teams}
           conference={selectedConference}
+          sport={selectedSport}
+          season={selectedSeason}
           conferenceState={conferenceState}
           remainingGames={remainingGames}
           selectedWinners={fullSeasonWinners}

@@ -3,12 +3,15 @@ import { Link } from 'react-router-dom';
 import { TeamLogo } from './TeamLogo';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { formatProbability } from '../utils/formatProbability';
+import { teamPath } from '../utils/routes';
 
 interface RecordDistributionTableProps {
   probabilities: ConferenceProbabilities;
   teams: SeasonTeams;
   schedules: Schedules | null;
   conference?: string;
+  sport?: string;
+  season?: string;
   historicalDate?: string;
 }
 
@@ -26,7 +29,7 @@ function probTextColor(prob: number): string {
   return '#1f2937';
 }
 
-export function RecordDistributionTable({ probabilities, teams, schedules, conference: conferenceProp, historicalDate }: RecordDistributionTableProps) {
+export function RecordDistributionTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season, historicalDate }: RecordDistributionTableProps) {
   const [recordType, setRecordType] = useState<RecordType>('conference');
   const conference = conferenceProp ?? probabilities.conference;
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
@@ -188,7 +191,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
               <tr key={teamName} className="border-b border-gray-100">
                 <td className="py-1.5 px-2 sticky left-0 bg-white">
                   <Link
-                    to={`/${conference}/teams/${encodeURIComponent(teamName)}${dateSuffix}`}
+                    to={`${teamPath(conference, teamName, sport, season)}${dateSuffix}`}
                     className="flex items-center gap-1.5 hover:text-blue-600"
                   >
                     <TeamLogo team={teamName} size="xs" />
