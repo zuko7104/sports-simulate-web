@@ -12,7 +12,7 @@ interface ProbabilityTimelineProps {
 
 const CHART_WIDTH = 800;
 const CHART_HEIGHT = 400;
-const MARGIN = { top: 20, right: 120, bottom: 40, left: 50 };
+const MARGIN = { top: 20, right: 20, bottom: 40, left: 40 };
 const PLOT_WIDTH = CHART_WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
 
@@ -175,7 +175,7 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-2">
-        {visibleTeams.slice(0, 12).map(team => {
+        {visibleTeams.map(team => {
           const meta = teams.teams[team];
           const latestProb = timeline.teams[team]?.[timeline.teams[team].length - 1]?.ccg_probability ?? 0;
           return (
