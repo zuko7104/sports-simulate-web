@@ -6,6 +6,8 @@ import { TiebreakersPage } from './pages/TiebreakersPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { TeamDetailPage } from './pages/TeamDetailPage';
 import { ConferenceLanding } from './pages/ConferenceLanding';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeToggle } from './components/ThemeToggle';
 import {
   DEFAULT_SPORT,
   KNOWN_CONFERENCES,
@@ -50,23 +52,27 @@ function Navigation() {
             <img src="/logo.png" alt="SportsSimulate logo" className="w-8 h-8" />
             SportsSimulate
           </Link>
-          {activeConference && (
-            <>
-              {/* Desktop nav */}
-              <div className="hidden sm:flex space-x-4">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
-                      location.pathname === link.to ? 'bg-gray-700' : ''
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-              {/* Mobile hamburger button */}
+          <div className="flex items-center gap-2">
+            {activeConference && (
+              <>
+                {/* Desktop nav */}
+                <div className="hidden sm:flex space-x-4">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 ${
+                        location.pathname === link.to ? 'bg-gray-700' : ''
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+            <ThemeToggle />
+            {activeConference && (
               <button
                 className="sm:hidden p-2 rounded-md hover:bg-gray-700 focus:outline-none"
                 onClick={() => setMenuOpen((o) => !o)}
@@ -81,8 +87,8 @@ function Navigation() {
                   )}
                 </svg>
               </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
       {/* Mobile dropdown menu */}
@@ -136,7 +142,7 @@ function LegacyTeamRedirect() {
 
 function AppLayout() {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Navigation />
       <main>
         <Routes>
@@ -159,7 +165,7 @@ function AppLayout() {
           <Route path="/:legacyConference/teams/:teamId" element={<LegacyTeamRedirect />} />
         </Routes>
       </main>
-      <footer className="bg-gray-800 text-gray-400 py-6 mt-12">
+      <footer className="bg-gray-800 dark:bg-gray-950 text-gray-400 dark:text-gray-500 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm">
           <p>College Football Season Results Simulator</p>
           <p className="mt-1">
@@ -173,11 +179,13 @@ function AppLayout() {
 
 function App() {
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <Routes>
-        <Route path="/*" element={<AppLayout />} />
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <Routes>
+          <Route path="/*" element={<AppLayout />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

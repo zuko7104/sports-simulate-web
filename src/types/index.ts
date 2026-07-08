@@ -45,13 +45,23 @@ export interface EveryOutcome {
 
 export interface TeamMetadata {
   display_name: string;
-  logo_url: string;
+  mascot: string | null;
+  abbreviation: string;
+  classification: string | null;
   primary_color: string;
+  alternate_color: string | null;
+  logo_light: string | null;
+  logo_dark: string | null;
   conference: string;
+  aliases?: string[];
 }
 
 export interface ConferenceMetadata {
   display_name: string;
+  abbreviation: string;
+  color: string;
+  logo_light: string | null;
+  logo_dark: string | null;
   teams: string[];
 }
 

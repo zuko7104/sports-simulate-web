@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import type { DatesConfig } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
+import { expandTeamAliases } from '../utils/teamAliases';
 
 interface UseConferenceDataResult {
   index: DataIndex | null;
@@ -152,7 +153,7 @@ export function useConferenceData(): UseConferenceDataResult {
         matchupsRes.json(),
       ]);
 
-      setTeams(teamsData);
+      setTeams(expandTeamAliases(teamsData));
       setSchedules(schedulesData);
       setProbabilities(probsData);
       setMatchups(matchupsData);

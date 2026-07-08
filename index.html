@@ -24,6 +24,17 @@
     <link rel="manifest" href="/site.webmanifest?v=0.1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SportsSimulate</title>
+    <script>
+      // Apply the persisted (or default) theme before first paint to avoid a
+      // light-mode flash on load. Kept in sync with ThemeContext's logic.
+      (function () {
+        var stored = localStorage.getItem('cfb-theme');
+        var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TeamLogo } from './TeamLogo';
+import { TeamLogoFor } from './TeamLogo';
 import type { TimelineData, SeasonTeams } from '../types';
 import { dateToWeekLabel, type DatesConfig } from '../utils/dateUtils';
 
@@ -39,8 +39,18 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
     });
   }, [sortedTeams, timeline.teams]);
 
-  const [hoveredTeam, setHoveredTeam] = useState<string | null>(highlightTeam ?? null);
+  const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(highlightTeam ?? null);
+
+  // The team currently highlighted: whatever is hovered takes priority,
+  // otherwise fall back to the clicked/selected team so it stays
+  // highlighted after the mouse moves away.
+  const activeTeam = hoveredTeam ?? selectedTeam;
+
+  function toggleSelectedTeam(team: string) {
+    setSelectedTeam((prev) => (prev === team ? null : team));
+  }
 
   // Scale functions
   const xScale = (dateStr: string) => {
@@ -110,8 +120,8 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
           {/* Team lines */}
           {visibleTeams.map(team => {
             const color = teams.teams[team]?.primary_color ?? '#888';
-            const isHighlighted = hoveredTeam === team;
-            const isFaded = hoveredTeam !== null && !isHighlighted;
+            const isHighlighted = activeTeam === team;
+            const isFaded = activeTeam !== null && !isHighlighted;
             return (
               <path
                 key={team}
@@ -120,29 +130,30 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
                 stroke={color}
                 strokeWidth={isHighlighted ? 3 : 1.5}
                 opacity={isFaded ? 0.15 : 1}
-                style={{ transition: 'opacity 0.15s, stroke-width 0.15s' }}
+                style={{ transition: 'opacity 0.15s, stroke-width 0.15s', cursor: 'pointer' }}
                 onMouseEnter={() => setHoveredTeam(team)}
                 onMouseLeave={() => setHoveredTeam(null)}
+                onClick={() => toggleSelectedTeam(team)}
               />
             );
           })}
 
-          {/* Data points for hovered team */}
-          {hoveredTeam && timeline.teams[hoveredTeam]?.map(entry => (
+          {/* Data points for the active (hovered or selected) team */}
+          {activeTeam && timeline.teams[activeTeam]?.map(entry => (
             <circle
               key={entry.date}
               cx={xScale(entry.date)}
               cy={yScale(entry.ccg_probability)}
               r={3}
-              fill={teams.teams[hoveredTeam]?.primary_color ?? '#888'}
+              fill={teams.teams[activeTeam]?.primary_color ?? '#888'}
               onMouseEnter={() => setHoveredDate(entry.date)}
               onMouseLeave={() => setHoveredDate(null)}
             />
           ))}
 
           {/* Tooltip */}
-          {hoveredTeam && hoveredDate && (() => {
-            const entry = timeline.teams[hoveredTeam]?.find(e => e.date === hoveredDate);
+          {activeTeam && hoveredDate && (() => {
+            const entry = timeline.teams[activeTeam]?.find(e => e.date === hoveredDate);
             if (!entry) return null;
             const x = xScale(entry.date);
             const y = yScale(entry.ccg_probability);
@@ -171,17 +182,18 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
               key={team}
               onMouseEnter={() => setHoveredTeam(team)}
               onMouseLeave={() => setHoveredTeam(null)}
+              onClick={() => toggleSelectedTeam(team)}
               className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-opacity ${
-                hoveredTeam === team ? 'ring-2 ring-gray-400' : ''
-              } ${hoveredTeam && hoveredTeam !== team ? 'opacity-30' : ''}`}
+                activeTeam === team ? 'ring-2 ring-gray-400 dark:ring-gray-500' : ''
+              } ${activeTeam && activeTeam !== team ? 'opacity-30' : ''}`}
             >
               <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: meta?.primary_color ?? '#888' }}
               />
-              <TeamLogo team={team} size="xs" />
+              <TeamLogoFor team={team} teams={teams} size="xs" />
               <span className="font-medium">{meta?.display_name ?? team}</span>
-              <span className="text-gray-500 font-mono">{(latestProb * 100).toFixed(0)}%</span>
+              <span className="text-gray-500 dark:text-gray-400 font-mono">{(latestProb * 100).toFixed(0)}%</span>
             </button>
           );
         })}

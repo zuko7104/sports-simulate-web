@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
+/* Enables the `dark:` variant via a class on <html> (toggled by ThemeContext),
+   instead of only following the OS-level prefers-color-scheme media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Custom styles */
 body {
-  @apply bg-gray-50 text-gray-900 min-h-screen m-0;
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 min-h-screen m-0 transition-colors duration-200;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
@@ -26,9 +30,9 @@ body {
 
 /* Card styling */
 .card {
-  @apply bg-white rounded-lg shadow-md p-4;
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none dark:ring-1 dark:ring-gray-700 p-4;
 }
 
 .card-header {
-  @apply text-lg font-semibold mb-3 pb-2 border-b border-gray-200;
+  @apply text-lg font-semibold mb-3 pb-2 border-b border-gray-200 dark:border-gray-700;
 }

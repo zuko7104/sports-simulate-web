@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { GameResult, SeasonTeams } from '../types';
-import { TeamLogo } from './TeamLogo';
+import { TeamLogoFor } from './TeamLogo';
+import { TeamName } from './TeamName';
 import { teamPath } from '../utils/routes';
 
 interface TeamScheduleProps {
@@ -27,14 +28,14 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
     <div className="overflow-x-auto">
       <table className="min-w-full">
         <thead>
-          <tr className="border-b border-gray-200">
-            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase">
+          <tr className="border-b border-gray-200 dark:border-gray-700">
+            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
               Date
             </th>
-            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 uppercase">
+            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
               Opponent
             </th>
-            <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 uppercase">
+            <th className="text-center py-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
               Result
             </th>
           </tr>
@@ -47,27 +48,27 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
             return (
               <tr
                 key={idx}
-                className={`border-b border-gray-100 ${
-                  isCompleted ? '' : 'bg-gray-50'
+                className={`border-b border-gray-100 dark:border-gray-800 ${
+                  isCompleted ? '' : 'bg-gray-50 dark:bg-gray-800'
                 }`}
               >
-                <td className="py-2 px-2 text-sm text-gray-600 whitespace-nowrap">
+                <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                   {formatDate(game.date)}
                 </td>
                 <td className="py-2 px-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400 text-xs w-4">
+                    <span className="text-gray-400 dark:text-gray-500 text-xs w-4">
                       {game.neutral ? 'vs' : game.is_home ? 'vs' : '@'}
                     </span>
-                    <TeamLogo team={game.opponent} size="sm" />
+                    <TeamLogoFor team={game.opponent} teams={teams} size="sm" />
                     <Link
                       to={`${teamPath(opponentMeta?.conference ?? conference ?? 'B12', game.opponent, sport, season)}${dateSuffix}`}
-                      className="text-sm hover:text-blue-600 hover:underline"
+                      className="text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                     >
-                      {opponentMeta?.display_name ?? game.opponent}
+                      <TeamName team={game.opponent} teams={teams} />
                     </Link>
                     {game.neutral && (
-                      <span className="text-xs text-gray-400">(N)</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">(N)</span>
                     )}
                   </div>
                 </td>
@@ -76,23 +77,23 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
                     <div className="flex items-center justify-center gap-2">
                       <span
                         className={`inline-block w-6 text-center text-sm font-semibold ${
-                          game.won ? 'text-green-600' : 'text-red-600'
+                          game.won ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         }`}
                       >
                         {game.won ? 'W' : 'L'}
                       </span>
-                      <span className="text-sm text-gray-600 font-mono">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-mono">
                         {game.score}
                       </span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-1">
-                      <span className="text-xs text-gray-400">Win prob:</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">Win prob:</span>
                       <span
                         className={`text-sm font-mono ${
                           (game.win_probability ?? 0.5) >= 0.5
-                            ? 'text-green-600'
-                            : 'text-gray-500'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-gray-500 dark:text-gray-400'
                         }`}
                       >
                         {Math.round((game.win_probability ?? 0.5) * 100)}%

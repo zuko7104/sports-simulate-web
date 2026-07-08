@@ -118,10 +118,10 @@ export function WhatIfExplorer() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
           What-If Explorer
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-400">
           Choose winners for upcoming games to see how it affects championship probabilities
           {currentDate && <span className="ml-2 text-sm">• Data from {currentDate}</span>}
         </p>
@@ -136,13 +136,13 @@ export function WhatIfExplorer() {
         />
 
         {/* Mode toggle */}
-        <div className="flex rounded-lg border border-gray-300 overflow-hidden ml-auto">
+        <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden ml-auto">
           <button
             onClick={() => setMode('next-weeks')}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               mode === 'next-weeks'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
             Next {whatIfWeekCount} Weeks
@@ -152,7 +152,7 @@ export function WhatIfExplorer() {
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               mode === 'full-season'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
             Full Season
@@ -163,12 +163,12 @@ export function WhatIfExplorer() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading data...</span>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading data...</span>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300">
           <strong>Error:</strong> {error}
         </div>
       )}
@@ -176,7 +176,7 @@ export function WhatIfExplorer() {
       {!loading && !error && mode === 'next-weeks' && (
         <>
           {!everyOutcome ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700">
+            <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-yellow-700 dark:text-yellow-300">
               <strong>Note:</strong> What-If data not available for Next {whatIfWeekCount} Weeks.
               Run simulation with <code>--export-json</code> flag to generate it.
             </div>

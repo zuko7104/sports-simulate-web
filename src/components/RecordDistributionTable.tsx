@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { TeamLogo } from './TeamLogo';
+import { TeamLogoFor } from './TeamLogo';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -23,10 +23,11 @@ function probBgColor(prob: number): string {
   return `rgba(59, 130, 246, ${alpha})`; // blue with opacity
 }
 
-function probTextColor(prob: number): string {
-  if (prob <= 0) return '#9ca3af';
-  if (prob >= 0.4) return '#ffffff';
-  return '#1f2937';
+function probTextClass(prob: number, impossible: boolean): string {
+  if (impossible) return 'text-gray-300 dark:text-gray-600';
+  if (prob <= 0) return 'text-gray-400 dark:text-gray-500';
+  if (prob >= 0.4) return 'text-white dark:text-gray-100';
+  return 'text-gray-800 dark:text-gray-100';
 }
 
 export function RecordDistributionTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season, historicalDate }: RecordDistributionTableProps) {
@@ -134,17 +135,17 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
       <div className="flex flex-wrap items-start sm:items-center justify-between gap-2 mb-4">
         <div>
           <h2 className="card-header mb-0">Final Record Distribution</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Probability of each team finishing with a given {recordType} record
           </p>
         </div>
-        <div className="flex rounded-lg overflow-hidden border border-gray-300">
+        <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
           <button
             onClick={() => setRecordType('conference')}
             className={`px-3 py-1 text-sm font-medium ${
               recordType === 'conference'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Conference
@@ -154,7 +155,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
             className={`px-3 py-1 text-sm font-medium ${
               recordType === 'overall'
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-100'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Overall
@@ -164,8 +165,8 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-2 sticky left-0 bg-white">Team</th>
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="text-left py-2 px-2 sticky left-0 bg-white dark:bg-gray-800">Team</th>
               {allRecords.map((record) => (
                 <th key={record} className="text-center py-2 px-2 font-mono whitespace-nowrap">
                   {record}
@@ -188,18 +189,18 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
                 return sum + wins * prob;
               }, 0);
               return (
-              <tr key={teamName} className="border-b border-gray-100">
-                <td className="py-1.5 px-2 sticky left-0 bg-white">
+              <tr key={teamName} className="border-b border-gray-100 dark:border-gray-800">
+                <td className="py-1.5 px-2 sticky left-0 bg-white dark:bg-gray-800">
                   <Link
                     to={`${teamPath(conference, teamName, sport, season)}${dateSuffix}`}
-                    className="flex items-center gap-1.5 hover:text-blue-600"
+                    className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
                   >
-                    <TeamLogo team={teamName} size="xs" />
+                    <TeamLogoFor team={teamName} teams={teams} size="xs" />
                     <span className="font-medium text-xs whitespace-nowrap hover:underline">
                       {teams.teams[teamName]?.display_name ?? teamName}
                     </span>
                     {currentRecord && (
-                      <span className="text-xs text-gray-400 font-mono whitespace-nowrap">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap">
                         ({currentRecord})
                       </span>
                     )}
@@ -211,10 +212,9 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
                   return (
                     <td
                       key={record}
-                      className="text-center py-1.5 px-2 font-mono text-xs"
+                      className={`text-center py-1.5 px-2 font-mono text-xs ${probTextClass(prob, impossible)}`}
                       style={{
-                        backgroundColor: impossible ? '#f3f4f6' : probBgColor(prob),
-                        color: impossible ? '#d1d5db' : probTextColor(prob),
+                        backgroundColor: impossible ? 'transparent' : probBgColor(prob),
                       }}
                     >
                       {impossible ? '-' : prob <= 0 ? '0.0%' : formatProbability(prob)}

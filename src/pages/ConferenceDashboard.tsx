@@ -5,6 +5,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { TeamProbabilityTable } from '../components/TeamProbabilityTable';
 import { CCGMatchupList } from '../components/CCGMatchupList';
 import { ConferenceSelector } from '../components/ConferenceSelector';
+import { ConferenceLogo } from '../components/ConferenceLogo';
 import { CCGOddsByRecord } from '../components/CCGOddsByRecord';
 import { RecordDistributionTable } from '../components/RecordDistributionTable';
 import { WeekImpactTable } from '../components/WeekImpactTable';
@@ -35,6 +36,7 @@ export function ConferenceDashboard() {
     : DEFAULT_CONFERENCES;
 
   const conferenceDisplayName = teams?.conferences[selectedConference]?.display_name ?? selectedConference;
+  const conferenceMeta = teams?.conferences[selectedConference];
   usePageTitle(conferenceDisplayName);
 
   const handleConferenceChange = (conf: string) => {
@@ -43,14 +45,17 @@ export function ConferenceDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {conferenceDisplayName} Championship Probabilities
-        </h1>
-        <p className="text-gray-600">
-          Simulated probabilities for conference championship game appearances
-          {currentDate && <span className="ml-2 text-sm">• Data from {currentDate}</span>}
-        </p>
+      <header className="mb-8 flex items-center gap-4">
+        <ConferenceLogo conference={selectedConference} meta={conferenceMeta} size="lg" />
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            {conferenceDisplayName} Championship Probabilities
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Simulated probabilities for conference championship game appearances
+            {currentDate && <span className="ml-2 text-sm">• Data from {currentDate}</span>}
+          </p>
+        </div>
       </header>
 
       <div className="mb-6">
@@ -63,13 +68,13 @@ export function ConferenceDashboard() {
       </div>
 
       {historicalDate && latestDate && historicalDate !== latestDate && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-          <span className="text-amber-800 text-sm">
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between">
+          <span className="text-amber-800 dark:text-amber-300 text-sm">
             📅 Viewing historical data from <strong>{dateToWeekLabel(historicalDate, datesConfig?.week1_start, datesConfig?.dates)}</strong>
           </span>
           <Link
             to={conferencePath(selectedConference, selectedSport, selectedSeason)}
-            className="text-sm text-amber-700 hover:text-amber-900 underline"
+            className="text-sm text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline"
           >
             Back to latest
           </Link>
@@ -79,12 +84,12 @@ export function ConferenceDashboard() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading data...</span>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading data...</span>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300">
           <strong>Error:</strong> {error}
           <p className="text-sm mt-1">
             Make sure you've run a simulation with --export-json first.

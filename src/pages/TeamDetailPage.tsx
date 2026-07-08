@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { TeamLogo } from '../components/TeamLogo';
+import { TeamLogoFor } from '../components/TeamLogo';
 import { TeamSchedule } from '../components/TeamSchedule';
 import { RecordProbabilities } from '../components/RecordProbabilities';
 import { LossScenarios } from '../components/LossScenarios';
@@ -9,6 +9,7 @@ import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { type DatesConfig } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
+import { expandTeamAliases } from '../utils/teamAliases';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath, teamPath } from '../utils/routes';
 import type {
@@ -102,7 +103,7 @@ export function TeamDetailPage() {
 
         const teamsRes = await fetch(r(`${sport}/${season}/teams.json`));
         if (!teamsRes.ok) throw new Error('Failed to load team data');
-        const teamsData: SeasonTeams = await teamsRes.json();
+        const teamsData: SeasonTeams = expandTeamAliases(await teamsRes.json());
         setTeams(teamsData);
 
         // Get the team's conference
@@ -203,7 +204,7 @@ export function TeamDetailPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading team data...</span>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading team data...</span>
         </div>
       </div>
     );
@@ -212,10 +213,10 @@ export function TeamDetailPage() {
   if (error || !teams || !schedules) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300">
           <strong>Error:</strong> {error ?? 'Failed to load data'}
         </div>
-        <Link to={conferencePath(urlConference ?? 'B12', sport, season)} className="text-blue-600 hover:underline mt-4 inline-block">
+        <Link to={conferencePath(urlConference ?? 'B12', sport, season)} className="text-blue-600 dark:text-blue-400 hover:underline mt-4 inline-block">
           ← Back to Dashboard
         </Link>
       </div>
@@ -232,10 +233,10 @@ export function TeamDetailPage() {
   if (!teamMeta || !teamSchedule) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-700">
+        <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-yellow-700 dark:text-yellow-300">
           Team "{teamName}" not found in data.
         </div>
-        <Link to={conferencePath(urlConference ?? 'B12', sport, season)} className="text-blue-600 hover:underline mt-4 inline-block">
+        <Link to={conferencePath(urlConference ?? 'B12', sport, season)} className="text-blue-600 dark:text-blue-400 hover:underline mt-4 inline-block">
           ← Back to Dashboard
         </Link>
       </div>
@@ -326,35 +327,40 @@ export function TeamDetailPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <nav className="text-sm mb-6">
-        <Link to={`${conferencePath(conference ?? urlConference ?? 'B12', sport, season)}${dateSuffix}`} className="text-blue-600 hover:underline">
-          {conferenceMeta?.display_name ?? urlConference ?? 'Conference'}
+        <Link to={`${conferencePath(conference ?? urlConference ?? 'B12', sport, season)}${dateSuffix}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+          {conferenceMeta?.abbreviation ?? urlConference ?? 'Conference'}
         </Link>
-        <span className="mx-2 text-gray-400">/</span>
-        <span className="text-gray-600">{teamMeta.display_name}</span>
+        <span className="mx-2 text-gray-400 dark:text-gray-600">/</span>
+        <span className="text-gray-600 dark:text-gray-400">{teamMeta.display_name}</span>
       </nav>
 
       {/* Team Header */}
       <header className="flex items-center gap-6 mb-8">
-        <TeamLogo team={teamName} size="lg" className="w-20 h-20" />
+        <TeamLogoFor team={teamName} teams={teams} size="lg" className="w-20 h-20" />
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {teamMeta.display_name}
+            {teamMeta.mascot && (
+              <span className="text-lg text-gray-400 dark:text-gray-500 font-normal ml-2">
+                {teamMeta.mascot}
+              </span>
+            )}
           </h1>
-          <p className="text-lg text-gray-600 mt-2">
+          <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
             <span className="font-mono font-semibold">{teamSchedule.wins}-{teamSchedule.losses}</span>
             {standingsPosition > 0 && (
               <>
                 {' '}{isTied ? 'T' : ''}{getOrdinalSuffix(standingsPosition)}{' '}
                 <span className="font-mono">({currentConfWins}-{currentConfLosses})</span>
-                {' '}in {conferenceMeta?.display_name ?? conference}
+                {' '}in {conferenceMeta?.abbreviation ?? conference}
               </>
             )}
           </p>
           {currentDate && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
               Data from {currentDate}
               {latestDate && currentDate !== latestDate && (
-                <>{' · '}<Link to={teamPath(conference ?? urlConference ?? 'B12', teamName, sport, season)} className="text-blue-600 hover:underline">View latest</Link></>
+                <>{' · '}<Link to={teamPath(conference ?? urlConference ?? 'B12', teamName, sport, season)} className="text-blue-600 dark:text-blue-400 hover:underline">View latest</Link></>
               )}
             </p>
           )}
@@ -365,7 +371,7 @@ export function TeamDetailPage() {
       {teamProbs && (() => {
         const bgColor = teamMeta.primary_color || '#1e40af';
         const useDarkText = shouldUseDarkText(bgColor);
-        const textColor = useDarkText ? 'text-gray-900' : 'text-white';
+        const textColor = useDarkText ? 'text-gray-900 dark:text-gray-100' : 'text-white';
         const textShadow = useDarkText ? 'none' : '0 1px 2px rgba(0,0,0,0.3)';
 
         return (
@@ -456,13 +462,13 @@ export function TeamDetailPage() {
                   <div className="w-32 shrink-0 flex items-center gap-1.5 justify-end">
                     <Link
                       to={`${teamPath(oppMeta?.conference ?? conference ?? urlConference ?? 'B12', opponent, sport, season)}${dateSuffix}`}
-                      className="text-sm hover:text-blue-600 hover:underline truncate"
+                      className="text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate"
                     >
                       {oppMeta?.display_name ?? opponent}
                     </Link>
-                    <TeamLogo team={opponent} size="xs" />
+                    <TeamLogoFor team={opponent} teams={teams} size="xs" />
                   </div>
-                  <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden relative">
+                  <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden relative">
                     <div
                       className="h-full rounded transition-all duration-300"
                       style={{

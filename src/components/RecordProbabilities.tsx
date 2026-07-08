@@ -81,13 +81,13 @@ export function RecordProbabilities({
   return (
     <div className="space-y-4">
       {/* View Toggle */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg w-fit">
         <button
           onClick={() => setViewMode('conference')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             viewMode === 'conference'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Conference
@@ -96,8 +96,8 @@ export function RecordProbabilities({
           onClick={() => setViewMode('overall')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
             viewMode === 'overall'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
+              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Overall
@@ -107,14 +107,14 @@ export function RecordProbabilities({
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 {viewMode === 'conference' ? 'Conf Record' : 'Record'}
               </th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Probability
               </th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 CCG if this record
               </th>
             </tr>
@@ -126,7 +126,7 @@ export function RecordProbabilities({
               const ccgProb = ccgByRecord?.[record] ?? 0;
 
               return (
-                <tr key={record} className="border-b border-gray-100">
+                <tr key={record} className="border-b border-gray-100 dark:border-gray-800">
                   <td className="py-2 px-3">
                     <span className="font-mono text-sm font-semibold">
                       {record}
@@ -134,7 +134,7 @@ export function RecordProbabilities({
                   </td>
                   <td className="py-2 px-3 w-48">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
+                      <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -143,7 +143,7 @@ export function RecordProbabilities({
                           }}
                         />
                       </div>
-                      <span className="text-sm font-mono text-gray-600 w-14 text-right">
+                      <span className="text-sm font-mono text-gray-600 dark:text-gray-400 w-14 text-right">
                         {probability > 0
                           ? `${(probability * 100).toFixed(1)}%`
                           : '0%'}
@@ -154,12 +154,12 @@ export function RecordProbabilities({
                     <span
                       className={`text-sm font-mono ${
                         ccgProb >= 0.5
-                          ? 'text-green-600 font-semibold'
+                          ? 'text-green-600 dark:text-green-400 font-semibold'
                           : ccgProb >= 0.2
-                          ? 'text-yellow-600'
+                          ? 'text-yellow-600 dark:text-yellow-400'
                           : ccgProb > 0
-                          ? 'text-gray-500'
-                          : 'text-gray-400'
+                          ? 'text-gray-500 dark:text-gray-400'
+                          : 'text-gray-400 dark:text-gray-500'
                       }`}
                     >
                       {ccgProb > 0 ? `${(ccgProb * 100).toFixed(1)}%` : '0%'}
@@ -172,7 +172,7 @@ export function RecordProbabilities({
         </table>
       </div>
 
-      <div className="text-xs text-gray-500 mt-2">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
         <p>
           <strong>
             {viewMode === 'conference' ? 'Conf Record' : 'Record'}:

@@ -297,7 +297,7 @@ export function FutureOutcomes({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
         {hasAnyCCGChance
           ? 'Championship probability for each combination of remaining game outcomes'
           : 'Final record probabilities for each combination of remaining game outcomes'}
@@ -306,21 +306,21 @@ export function FutureOutcomes({
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Scenario
               </th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Record
               </th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Conf
               </th>
-              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+              <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                 Likelihood
               </th>
               {hasAnyCCGChance && (
-                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 uppercase">
+                <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   CCG Prob
                 </th>
               )}
@@ -334,20 +334,20 @@ export function FutureOutcomes({
               return (
                 <tr
                   key={`${row.label}-${idx}`}
-                  className={`border-b ${showDivider ? 'border-gray-300' : 'border-gray-100'} ${
-                    row.isAggregate ? 'bg-gray-50' : ''
+                  className={`border-b ${showDivider ? 'border-gray-300 dark:border-gray-600' : 'border-gray-100 dark:border-gray-800'} ${
+                    row.isAggregate ? 'bg-gray-50 dark:bg-gray-800' : ''
                   }`}
                 >
                   <td className="py-2 px-3">
                     <span
                       className={`text-sm ${
                         row.isAggregate
-                          ? 'font-semibold text-gray-800'
+                          ? 'font-semibold text-gray-800 dark:text-gray-200'
                           : row.isWinOut
-                          ? 'font-medium text-green-600'
+                          ? 'font-medium text-green-600 dark:text-green-400'
                           : row.isLoseOut
-                          ? 'font-medium text-red-600'
-                          : 'text-gray-700'
+                          ? 'font-medium text-red-600 dark:text-red-400'
+                          : 'text-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {row.isAggregate ? '▸ ' : ''}
@@ -360,13 +360,13 @@ export function FutureOutcomes({
                     </span>
                   </td>
                   <td className="py-2 px-3">
-                    <span className="font-mono text-sm text-gray-600">
+                    <span className="font-mono text-sm text-gray-600 dark:text-gray-400">
                       {row.confRecord}
                     </span>
                   </td>
                   <td className="py-2 px-3 w-32">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                      <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -375,7 +375,7 @@ export function FutureOutcomes({
                           }}
                         />
                       </div>
-                      <span className="text-xs font-mono text-gray-500 w-12 text-right">
+                      <span className="text-xs font-mono text-gray-500 dark:text-gray-400 w-12 text-right">
                         {(row.likelihood * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -383,7 +383,7 @@ export function FutureOutcomes({
                   {hasAnyCCGChance && (
                     <td className="py-2 px-3 w-40">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
+                        <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
@@ -395,10 +395,10 @@ export function FutureOutcomes({
                         <span
                           className={`text-sm font-mono w-14 text-right ${
                             row.ccgProb >= 0.5
-                              ? 'text-green-600 font-semibold'
+                              ? 'text-green-600 dark:text-green-400 font-semibold'
                               : row.ccgProb > 0
-                              ? 'text-gray-700'
-                              : 'text-gray-400'
+                              ? 'text-gray-700 dark:text-gray-300'
+                              : 'text-gray-400 dark:text-gray-500'
                           }`}
                         >
                           {row.ccgProb > 0 ? `${(row.ccgProb * 100).toFixed(1)}%` : '—'}
@@ -413,7 +413,7 @@ export function FutureOutcomes({
         </table>
       </div>
 
-      <div className="text-xs text-gray-500 space-y-1">
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
         <p>
           <strong>▸ Aggregate rows:</strong> Combined probability for any path to that record.
         </p>

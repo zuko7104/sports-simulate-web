@@ -1,4 +1,4 @@
-import { TeamLogo } from './TeamLogo';
+import { TeamLogoFor } from './TeamLogo';
 import type { LossScenario, SeasonTeams } from '../types';
 
 interface LossScenariosProps {
@@ -15,7 +15,7 @@ function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-export function LossScenarios({ teamName, scenarios, teamColor = '#3b82f6', currentLossOpponents = [] }: LossScenariosProps) {
+export function LossScenarios({ teamName, scenarios, teams, teamColor = '#3b82f6', currentLossOpponents = [] }: LossScenariosProps) {
   if (!scenarios || scenarios.length === 0) return null;
 
   const currentLossSet = new Set(currentLossOpponents);
@@ -50,10 +50,10 @@ export function LossScenarios({ teamName, scenarios, teamColor = '#3b82f6', curr
     const barWidth = ccgProb * 100;
     return (
       <div key={key} className={`flex items-center gap-2 ${bold ? 'mt-3 first:mt-0' : ''}`}>
-        <div className={`w-28 flex flex-wrap gap-0.5 justify-end shrink-0 ${bold ? 'font-semibold text-sm text-gray-700' : ''}`}>
+        <div className={`w-28 flex flex-wrap gap-0.5 justify-end shrink-0 ${bold ? 'font-semibold text-sm text-gray-700 dark:text-gray-300' : ''}`}>
           {label}
         </div>
-        <div className="flex-1 h-6 bg-gray-100 rounded overflow-hidden relative">
+        <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden relative">
           <div
             className="h-full rounded transition-all duration-300"
             style={{
@@ -68,7 +68,7 @@ export function LossScenarios({ teamName, scenarios, teamColor = '#3b82f6', curr
             {formatPercent(ccgProb)}
           </span>
         </div>
-        <span className="text-xs text-gray-400 w-20 text-right font-mono shrink-0">
+        <span className="text-xs text-gray-400 dark:text-gray-500 w-20 text-right font-mono shrink-0">
           {formatPercent(occurrenceProb)}
         </span>
       </div>
@@ -77,14 +77,14 @@ export function LossScenarios({ teamName, scenarios, teamColor = '#3b82f6', curr
 
   return (
     <div className="space-y-1.5 overflow-hidden">
-      <p className="text-sm text-gray-600 mb-2">
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
         CCG probability given specific future losses
       </p>
 
       {/* Column headings */}
-      <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide pb-1 border-b border-gray-200">
+      <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide pb-1 border-b border-gray-200 dark:border-gray-700">
         <div className="w-28 text-right shrink-0">Future Losses</div>
-        <div className="flex-1 flex items-center justify-center gap-1"><TeamLogo team={teamName} size="xs" /> CCG Probability</div>
+        <div className="flex-1 flex items-center justify-center gap-1"><TeamLogoFor team={teamName} teams={teams} size="xs" /> CCG Probability</div>
         <div className="w-20 text-right shrink-0">Likelihood</div>
       </div>
 
@@ -115,7 +115,7 @@ export function LossScenarios({ teamName, scenarios, teamColor = '#3b82f6', curr
                   <span>Win out</span>
                 ) : (
                   futureLosses.map(opp => (
-                    <TeamLogo key={opp} team={opp} size="xs" />
+                    <TeamLogoFor key={opp} team={opp} teams={teams} size="xs" />
                   ))
                 ),
                 scenario.ccg_probability,

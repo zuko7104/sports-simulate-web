@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
-import { TeamLogo } from '../components/TeamLogo';
+import { TeamLogoFor } from '../components/TeamLogo';
 import { ConferenceSelector } from '../components/ConferenceSelector';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSubPath, teamPath } from '../utils/routes';
@@ -16,7 +16,7 @@ function formatPercent(value: number): string {
 function ProbabilityBar({ value }: { value: number }) {
   const widthPct = Math.max(1, Math.min(100, value * 100));
   return (
-    <div className="w-full bg-gray-100 rounded-full h-2 mt-1">
+    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mt-1">
       <div
         className="bg-blue-500 h-2 rounded-full transition-all"
         style={{ width: `${widthPct}%` }}
@@ -72,10 +72,10 @@ export function TiebreakersPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">
           {conferenceName} Tiebreaker Scenarios
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-400">
           Scenarios where tiebreakers determine conference championship game participants
         </p>
       </header>
@@ -92,20 +92,20 @@ export function TiebreakersPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading data...</span>
+          <span className="ml-3 text-gray-600 dark:text-gray-400">Loading data...</span>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+        <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300">
           <strong>Error:</strong> {error}
         </div>
       )}
 
       {!loading && !error && !tiebreakers && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
           <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Tiebreaker Data</h3>
-          <p className="text-yellow-700">
+          <p className="text-yellow-700 dark:text-yellow-300">
             Tiebreaker scenario data is not yet available for this conference.
           </p>
         </div>
@@ -114,18 +114,18 @@ export function TiebreakersPage() {
       {!loading && !error && tiebreakers && tiebreakers.scenarios.length > 0 && (
         <>
           {/* Info banner */}
-          <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <div className="mb-5 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800">
             ⚠️ Some tiebreaker outcomes depend on factors like point differentials that cannot be predicted before games are played.
           </div>
 
           {/* Filters */}
           <div className="mb-5 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Filter by team:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by team:</label>
               <select
                 value={filterTeam}
                 onChange={(e) => setFilterTeam(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">All teams</option>
                 {[...tiebreakerTeams].sort().map(team => (
@@ -135,24 +135,24 @@ export function TiebreakersPage() {
                 ))}
               </select>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {filteredScenarios.length} of {tiebreakers.scenarios.length} scenarios
               {filteredScenarios.length > 50 && ' (showing top 50)'}
             </p>
           </div>
 
           {/* Scenario table */}
-          <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Scenario
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Likely CCG Matchup
                   </th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                     Probability
                   </th>
                 </tr>
@@ -164,7 +164,7 @@ export function TiebreakersPage() {
                     .sort(([a], [b]) => parseInt(a) - parseInt(b));
 
                   return (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       {/* Scenario: loss groups */}
                       <td className="px-4 py-3">
                         <div className="space-y-1.5">
@@ -175,7 +175,7 @@ export function TiebreakersPage() {
                                 <span className={`inline-flex items-center text-xs font-bold px-2 py-0.5 rounded ${
                                   losses === '0' ? 'bg-green-100 text-green-800' :
                                   losses === '1' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-600'
+                                  'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                                 }`}>
                                   {wins}-{losses}
                                 </span>
@@ -184,9 +184,9 @@ export function TiebreakersPage() {
                                     <Link
                                       key={team}
                                       to={teamPath(conference, team, sport, year)}
-                                      className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded-md bg-gray-50 hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200"
+                                      className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded-md bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200 dark:border-gray-700"
                                     >
-                                      <TeamLogo team={team} size="xs" />
+                                      <TeamLogoFor team={team} teams={teams} size="xs" />
                                       <span>{teams?.teams[team]?.display_name ?? team}</span>
                                     </Link>
                                   ))}
@@ -204,28 +204,28 @@ export function TiebreakersPage() {
                             {scenario.ccg_matchups.slice(0, 3).map((matchup, i) => (
                               <div key={i} className="flex items-center gap-1.5 text-sm">
                                 <span className="inline-flex items-center gap-1">
-                                  <TeamLogo team={matchup.team_a} size="xs" />
+                                  <TeamLogoFor team={matchup.team_a} teams={teams} size="xs" />
                                   <span className="font-medium">{teams?.teams[matchup.team_a]?.display_name ?? matchup.team_a}</span>
                                 </span>
-                                <span className="text-gray-400 text-xs">vs</span>
+                                <span className="text-gray-400 dark:text-gray-500 text-xs">vs</span>
                                 <span className="inline-flex items-center gap-1">
-                                  <TeamLogo team={matchup.team_b} size="xs" />
+                                  <TeamLogoFor team={matchup.team_b} teams={teams} size="xs" />
                                   <span className="font-medium">{teams?.teams[matchup.team_b]?.display_name ?? matchup.team_b}</span>
                                 </span>
-                                <span className="text-xs text-gray-400 ml-1">
+                                <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
                                   {formatPercent(matchup.probability)}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400 italic">Uncertain</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 italic">Uncertain</span>
                         )}
                       </td>
 
                       {/* Probability */}
                       <td className="px-4 py-3 text-right">
-                        <span className="text-base font-bold font-mono text-gray-900">
+                        <span className="text-base font-bold font-mono text-gray-900 dark:text-gray-100">
                           {formatPercent(scenario.probability)}
                         </span>
                         <ProbabilityBar value={scenario.probability / (filteredScenarios[0]?.probability || 1)} />
@@ -238,7 +238,7 @@ export function TiebreakersPage() {
           </div>
 
           {filteredScenarios.length > 50 && (
-            <p className="text-center text-gray-500 text-sm mt-3">
+            <p className="text-center text-gray-500 dark:text-gray-400 text-sm mt-3">
               Showing top 50 of {filteredScenarios.length} scenarios
             </p>
           )}
@@ -246,41 +246,41 @@ export function TiebreakersPage() {
       )}
 
       {/* How tiebreakers work */}
-      <div className="mt-8 bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">
+      <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
           How Tiebreakers Work
         </h3>
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-800 mb-1">Big 12</h4>
-            <p className="text-sm text-gray-600">
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">Big 12</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Head-to-head record → Record against the highest-placed
               common opponent → Next-highest, etc. → Strength of schedule → Total wins
             </p>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-800 mb-1">SEC</h4>
-            <p className="text-sm text-gray-600">
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">SEC</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Head-to-head → Common conference opponents → Combined record
               against next-highest teams → Strength of schedule → Scoring margin
             </p>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-800 mb-1">Big Ten</h4>
-            <p className="text-sm text-gray-600">
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">Big Ten</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Head-to-head → Common conference opponents → Record against
               highest-placed opponent → Next-highest, etc.
             </p>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-800 mb-1">ACC</h4>
-            <p className="text-sm text-gray-600">
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">ACC</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Head-to-head → Common conference opponents → Record against
               next-best common opponent → Strength of schedule
             </p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
           Some tiebreaker steps involve factors like point differential that cannot
           be predicted before games are played, leading to uncertain outcomes.
         </p>

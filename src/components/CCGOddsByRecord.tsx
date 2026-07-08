@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { TeamLogo } from './TeamLogo';
+import { TeamLogoFor } from './TeamLogo';
 import type { ConferenceProbabilities, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -20,10 +20,10 @@ function probBgColor(prob: number): string {
   return `rgba(59, 130, 246, ${alpha})`;
 }
 
-function probTextColor(prob: number): string {
-  if (prob <= 0) return '#9ca3af';
-  if (prob >= 0.4) return '#ffffff';
-  return '#1f2937';
+function probTextClass(prob: number): string {
+  if (prob <= 0) return 'text-gray-400 dark:text-gray-500';
+  if (prob >= 0.4) return 'text-white dark:text-gray-100';
+  return 'text-gray-800 dark:text-gray-100';
 }
 
 export function CCGOddsByRecord({ probabilities, teams, conference: conferenceProp, sport, season, historicalDate }: CCGOddsByRecordProps) {
@@ -71,14 +71,14 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
   return (
     <div className="card">
       <h2 className="card-header">CCG Odds by Conference Record</h2>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         Probability of making the conference championship game given a final conference record
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-2 sticky left-0 bg-white">Team</th>
+            <tr className="border-b border-gray-200 dark:border-gray-700">
+              <th className="text-left py-2 px-2 sticky left-0 bg-white dark:bg-gray-800">Team</th>
               {allRecords.map((record) => (
                 <th key={record} className="text-center py-2 px-2 font-mono whitespace-nowrap">
                   {record}
@@ -89,13 +89,13 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
           </thead>
           <tbody>
             {teamData.map(({ teamName, records, ccgProb }) => (
-              <tr key={teamName} className="border-b border-gray-100">
-                <td className="py-1.5 px-2 sticky left-0 bg-white">
+              <tr key={teamName} className="border-b border-gray-100 dark:border-gray-800">
+                <td className="py-1.5 px-2 sticky left-0 bg-white dark:bg-gray-800">
                   <Link
                     to={`${teamPath(conference, teamName, sport, season)}${dateSuffix}`}
-                    className="flex items-center gap-1.5 hover:text-blue-600"
+                    className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
                   >
-                    <TeamLogo team={teamName} size="xs" />
+                    <TeamLogoFor team={teamName} teams={teams} size="xs" />
                     <span className="font-medium text-xs whitespace-nowrap hover:underline">
                       {teams.teams[teamName]?.display_name ?? teamName}
                     </span>
@@ -106,10 +106,9 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
                   return (
                     <td
                       key={record}
-                      className="text-center py-1.5 px-2 font-mono text-xs"
+                      className={`text-center py-1.5 px-2 font-mono text-xs ${probTextClass(prob)}`}
                       style={{
                         backgroundColor: probBgColor(prob),
-                        color: probTextColor(prob),
                       }}
                     >
                       {formatProbability(prob)}
@@ -117,10 +116,9 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
                   );
                 })}
                 <td
-                  className="text-center py-1.5 px-2 font-mono text-xs font-semibold"
+                  className={`text-center py-1.5 px-2 font-mono text-xs font-semibold ${probTextClass(ccgProb)}`}
                   style={{
                     backgroundColor: probBgColor(ccgProb),
-                    color: probTextColor(ccgProb),
                   }}
                 >
                   {formatProbability(ccgProb)}

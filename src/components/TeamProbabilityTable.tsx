@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { formatProbability } from '../utils/formatProbability';
-import { TeamLogo } from './TeamLogo';
+import { TeamLogoFor } from './TeamLogo';
+import { TeamName } from './TeamName';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { teamPath } from '../utils/routes';
@@ -78,7 +79,7 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
       <div className="overflow-x-auto">
         <table className="w-full min-w-[500px]">
           <thead>
-            <tr className="border-b border-gray-200">
+            <tr className="border-b border-gray-200 dark:border-gray-700">
               <th className="text-center py-2 px-2 w-8">#</th>
               <th className="text-left py-2 px-3">Team</th>
               <th className="text-center py-2 px-3">Conf</th>
@@ -93,32 +94,32 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
               const percentage = formatProbability(team.ccgProb);
 
               return (
-                <tr key={team.teamName} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="text-center py-2 px-2 text-gray-500 font-mono">
+                <tr key={team.teamName} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="text-center py-2 px-2 text-gray-500 dark:text-gray-400 font-mono">
                     {standings.filter(t => t.rank === team.rank).length > 1 ? `T${team.rank}` : team.rank}
                   </td>
                   <td className="py-2 px-3">
                     <Link
                       to={`${teamPath(conference, team.teamName, sport, season)}${dateSuffix}`}
-                      className="flex items-center gap-2 hover:text-blue-600"
+                      className="flex items-center gap-2 hover:text-blue-600 dark:hover:text-blue-400"
                     >
-                      <TeamLogo team={team.teamName} size="sm" />
+                      <TeamLogoFor team={team.teamName} teams={teams} size="sm" />
                       <span className="font-medium hover:underline">
-                        {teamMeta?.display_name ?? team.teamName}
+                        <TeamName team={team.teamName} teams={teams} />
                       </span>
                     </Link>
                   </td>
                   <td className="text-center py-2 px-3 font-mono">
                     {team.confWins}-{team.confLosses}
                   </td>
-                  <td className="text-center py-2 px-3 font-mono text-gray-600">
+                  <td className="text-center py-2 px-3 font-mono text-gray-600 dark:text-gray-400">
                     {team.overallWins}-{team.overallLosses}
                   </td>
                   <td className="text-right py-2 px-2 font-mono text-sm">
                     {team.ccgProb > 0 ? percentage : '-'}
                   </td>
                   <td className="py-2 px-2">
-                    <div className="w-full bg-gray-200 rounded h-4 overflow-hidden">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-4 overflow-hidden">
                       <div
                         className="h-full rounded transition-all duration-300"
                         style={{
@@ -134,7 +135,7 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
           </tbody>
         </table>
       </div>
-      <p className="text-sm text-gray-500 mt-3">
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
         Based on {probabilities.iterations.toLocaleString()} simulations •
         Data from {probabilities.simulation_date}
       </p>
