@@ -87,8 +87,8 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
       <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-          className="w-full h-auto block"
-          preserveAspectRatio="xMidYMid meet"
+          className="w-full aspect-[2/1] block"
+          preserveAspectRatio="none"
         >
           {/* Grid lines */}
           {yTicks.map(tick => (

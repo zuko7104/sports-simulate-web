@@ -86,22 +86,28 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
 
       {/* Per-game impact table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[380px]">
+        <table className="w-full text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left py-2 px-2">Game</th>
-              <th className="text-center py-2 px-2">
+              <th className="text-left py-1 px-1 sm:py-2 sm:px-2">Game</th>
+              <th className="text-center py-1 px-1 sm:py-2 sm:px-2">
                 <div className="flex flex-col items-center gap-0.5">
                   <TeamLogoFor team={activeTeam} teams={teams} size="xs" />
                   <span>CCG Odds</span>
-                  <span className="font-normal text-gray-500 dark:text-gray-400">If Away Wins</span>
+                  <span className="font-normal text-gray-500 dark:text-gray-400">
+                    <span className="hidden sm:inline">If Away Wins</span>
+                    <span className="sm:hidden">Away</span>
+                  </span>
                 </div>
               </th>
-              <th className="text-center py-2 px-2">
+              <th className="text-center py-1 px-1 sm:py-2 sm:px-2">
                 <div className="flex flex-col items-center gap-0.5">
                   <TeamLogoFor team={activeTeam} teams={teams} size="xs" />
                   <span>CCG Odds</span>
-                  <span className="font-normal text-gray-500 dark:text-gray-400">If Home Wins</span>
+                  <span className="font-normal text-gray-500 dark:text-gray-400">
+                    <span className="hidden sm:inline">If Home Wins</span>
+                    <span className="sm:hidden">Home</span>
+                  </span>
                 </div>
               </th>
             </tr>
@@ -111,7 +117,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
               const isHighlighted = hoveredTeam === game.away_team || hoveredTeam === game.home_team;
               return (
               <tr key={i} className={`border-b border-gray-100 dark:border-gray-800 transition-colors ${isHighlighted ? 'bg-yellow-100 dark:bg-yellow-500/20' : ''}`}>
-                <td className="py-2 px-1 sm:px-2">
+                <td className="py-1 px-1 sm:py-2 sm:px-2">
                   <div className="flex items-center gap-1">
                     <TeamLogoFor team={game.away_team} teams={teams} size="xs" />
                     <Link
@@ -130,14 +136,14 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                     </Link>
                   </div>
                 </td>
-                <td className={`text-center py-2 px-2 font-mono text-xs ${impactColor(game.impact_if_away_wins)}`}>
+                <td className={`text-center py-1 px-1 sm:py-2 sm:px-2 font-mono text-xs ${impactColor(game.impact_if_away_wins)}`}>
                   {formatPercent(game.ccg_prob_if_away_wins)}
                   <br />
                   <span className="text-xs">
                     ({formatImpact(game.impact_if_away_wins)})
                   </span>
                 </td>
-                <td className={`text-center py-2 px-2 font-mono text-xs ${impactColor(game.impact_if_home_wins)}`}>
+                <td className={`text-center py-1 px-1 sm:py-2 sm:px-2 font-mono text-xs ${impactColor(game.impact_if_home_wins)}`}>
                   {formatPercent(game.ccg_prob_if_home_wins)}
                   <br />
                   <span className="text-xs">

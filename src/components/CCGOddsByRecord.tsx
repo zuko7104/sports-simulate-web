@@ -91,13 +91,13 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
           <tbody>
             {teamData.map(({ teamName, records, ccgProb }) => (
               <tr key={teamName} className="border-b border-gray-100 dark:border-gray-800">
-                <td className="py-1.5 px-2 sticky left-0 bg-white dark:bg-gray-800">
+                <td className="py-1.5 px-2 sticky left-0 bg-white dark:bg-gray-800 min-w-[72px] sm:min-w-0">
                   <Link
                     to={`${teamPath(conference, teamName, sport, season)}${dateSuffix}`}
-                    className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
+                    className="flex items-center gap-1.5 min-w-0 hover:text-blue-600 dark:hover:text-blue-400"
                   >
-                    <TeamLogoFor team={teamName} teams={teams} size="xs" />
-                    <TeamName team={teamName} teams={teams} className="font-medium text-xs whitespace-nowrap hover:underline" />
+                    <TeamLogoFor team={teamName} teams={teams} size="xs" className="shrink-0" />
+                    <TeamName team={teamName} teams={teams} className="font-medium text-xs truncate min-w-0 hover:underline" />
                   </Link>
                 </td>
                 {allRecords.map((record) => {

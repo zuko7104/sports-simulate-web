@@ -77,48 +77,56 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
     <div className="card">
       <h2 className="card-header">Conference Standings</h2>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[360px] text-xs sm:text-sm">
+        <table className="w-full table-fixed text-xs sm:text-sm">
+          <colgroup>
+            <col className="w-5 sm:w-8" />
+            <col />
+            <col className="w-10 sm:w-14" />
+            <col className="w-12 sm:w-14" />
+            <col className="w-12 sm:w-12" />
+            <col className="w-16 sm:w-24" />
+          </colgroup>
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-center py-1.5 px-1 sm:py-2 sm:px-2 w-6 sm:w-8">#</th>
-              <th className="text-left py-1.5 px-1.5 sm:py-2 sm:px-3">Team</th>
-              <th className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3">Conf</th>
-              <th className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3 hidden sm:table-cell">Overall</th>
-              <th className="text-right py-1.5 px-1 sm:py-2 sm:px-2 w-10 sm:w-12">CCG Odds</th>
-              <th className="text-left py-1.5 px-1 sm:py-2 sm:px-2 w-12 sm:w-24 hidden sm:table-cell"></th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-2">#</th>
+              <th className="text-left py-1 px-0.5 sm:py-2 sm:px-3">Team</th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-3">Conf</th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-3">Overall</th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-2" colSpan={2}>CCG Odds</th>
             </tr>
           </thead>
           <tbody>
             {standings.map((team) => {
               const teamMeta = teams.teams[team.teamName];
               const percentage = formatProbability(team.ccgProb);
+              const hasChance = team.ccgProb > 0;
 
               return (
                 <tr key={team.teamName} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="text-center py-1.5 px-1 sm:py-2 sm:px-2 text-gray-500 dark:text-gray-400 font-mono">
+                  <td className="text-center py-1 px-0.5 sm:py-2 sm:px-2 text-gray-500 dark:text-gray-400 font-mono">
                     {standings.filter(t => t.rank === team.rank).length > 1 ? `T${team.rank}` : team.rank}
                   </td>
-                  <td className="py-1.5 px-1.5 sm:py-2 sm:px-3">
+                  <td className="py-1 px-0.5 sm:py-2 sm:px-3">
                     <Link
                       to={`${teamPath(conference, team.teamName, sport, season)}${dateSuffix}`}
-                      className="flex items-center gap-1.5 sm:gap-2 hover:text-blue-600 dark:hover:text-blue-400"
+                      className="flex items-center gap-1 sm:gap-2 min-w-0 hover:text-blue-600 dark:hover:text-blue-400"
                     >
-                      <TeamLogoFor team={team.teamName} teams={teams} size="xs" className="sm:w-6 sm:h-6" />
-                      <span className="font-medium hover:underline truncate">
+                      <TeamLogoFor team={team.teamName} teams={teams} size="xs" className="shrink-0 sm:w-6 sm:h-6" />
+                      <span className="font-medium hover:underline truncate min-w-0">
                         <TeamName team={team.teamName} teams={teams} />
                       </span>
                     </Link>
                   </td>
-                  <td className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3 font-mono whitespace-nowrap">
+                  <td className="text-center py-1 px-0.5 sm:py-2 sm:px-3 font-mono whitespace-nowrap">
                     {team.confWins}-{team.confLosses}
                   </td>
-                  <td className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3 font-mono text-gray-600 dark:text-gray-400 hidden sm:table-cell whitespace-nowrap">
+                  <td className="text-center py-1 px-0.5 sm:py-2 sm:px-3 font-mono text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     {team.overallWins}-{team.overallLosses}
                   </td>
-                  <td className="text-right py-1.5 px-1 sm:py-2 sm:px-2 font-mono whitespace-nowrap">
-                    {team.ccgProb > 0 ? percentage : '-'}
+                  <td className="text-center py-1 px-0.5 sm:py-2 sm:px-2 font-mono whitespace-nowrap">
+                    {hasChance ? <span className="block text-right">{percentage}</span> : '-'}
                   </td>
-                  <td className="py-1.5 px-1 sm:py-2 sm:px-2 hidden sm:table-cell">
+                  <td className="py-1 px-0.5 sm:py-2 sm:px-2">
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-4 overflow-hidden">
                       <div
                         className="h-full rounded transition-all duration-300"
