@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
+import { TeamName } from './TeamName';
 import type { ConferenceProbabilities, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -96,9 +97,7 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
                     className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     <TeamLogoFor team={teamName} teams={teams} size="xs" />
-                    <span className="font-medium text-xs whitespace-nowrap hover:underline">
-                      {teams.teams[teamName]?.display_name ?? teamName}
-                    </span>
+                    <TeamName team={teamName} teams={teams} className="font-medium text-xs whitespace-nowrap hover:underline" />
                   </Link>
                 </td>
                 {allRecords.map((record) => {
@@ -106,7 +105,7 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
                   return (
                     <td
                       key={record}
-                      className={`text-center py-1.5 px-2 font-mono text-xs ${probTextClass(prob)}`}
+                      className={`text-center py-1.5 px-2 font-mono text-xs whitespace-nowrap ${probTextClass(prob)}`}
                       style={{
                         backgroundColor: probBgColor(prob),
                       }}
@@ -116,7 +115,7 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
                   );
                 })}
                 <td
-                  className={`text-center py-1.5 px-2 font-mono text-xs font-semibold ${probTextClass(ccgProb)}`}
+                  className={`text-center py-1.5 px-2 font-mono text-xs font-semibold whitespace-nowrap ${probTextClass(ccgProb)}`}
                   style={{
                     backgroundColor: probBgColor(ccgProb),
                   }}

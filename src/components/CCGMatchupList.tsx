@@ -1,16 +1,22 @@
+import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
 import type { CCGMatchups, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
+import { teamPath } from '../utils/routes';
 
 interface CCGMatchupListProps {
   matchups: CCGMatchups;
   teams: SeasonTeams;
   conference?: string;
+  sport?: string;
+  season?: string;
+  historicalDate?: string;
   limit?: number;
 }
 
-export function CCGMatchupList({ matchups, teams, limit = 15 }: CCGMatchupListProps) {
+export function CCGMatchupList({ matchups, teams, conference, sport, season, historicalDate, limit = 15 }: CCGMatchupListProps) {
+  const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const topMatchups = matchups.matchups.slice(0, limit);
   const maxProb = topMatchups.length > 0 ? topMatchups[0].probability : 1;
 
@@ -50,15 +56,25 @@ export function CCGMatchupList({ matchups, teams, limit = 15 }: CCGMatchupListPr
                 </span>
 
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-                  <TeamLogoFor team={matchup.team_a} teams={teams} size="sm" />
-                  <TeamName team={matchup.team_a} teams={teams} className="font-medium text-sm truncate" />
+                  <Link
+                    to={`${teamPath(conference ?? matchups.conference, matchup.team_a, sport, season)}${dateSuffix}`}
+                    className="flex items-center gap-1.5 sm:gap-2 min-w-0 hover:underline"
+                  >
+                    <TeamLogoFor team={matchup.team_a} teams={teams} size="sm" />
+                    <TeamName team={matchup.team_a} teams={teams} className="font-medium text-sm truncate" />
+                  </Link>
                 </div>
 
                 <span className="text-gray-400 dark:text-gray-500 text-xs font-medium">vs</span>
 
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 justify-end">
-                  <TeamName team={matchup.team_b} teams={teams} className="font-medium text-sm truncate text-right" />
-                  <TeamLogoFor team={matchup.team_b} teams={teams} size="sm" />
+                  <Link
+                    to={`${teamPath(conference ?? matchups.conference, matchup.team_b, sport, season)}${dateSuffix}`}
+                    className="flex items-center gap-1.5 sm:gap-2 min-w-0 hover:underline justify-end"
+                  >
+                    <TeamName team={matchup.team_b} teams={teams} className="font-medium text-sm truncate text-right" />
+                    <TeamLogoFor team={matchup.team_b} teams={teams} size="sm" />
+                  </Link>
                 </div>
               </div>
             </div>

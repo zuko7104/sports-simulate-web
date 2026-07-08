@@ -77,15 +77,15 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
     <div className="card">
       <h2 className="card-header">Conference Standings</h2>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[500px]">
+        <table className="w-full min-w-[360px] text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-center py-2 px-2 w-8">#</th>
-              <th className="text-left py-2 px-3">Team</th>
-              <th className="text-center py-2 px-3">Conf</th>
-              <th className="text-center py-2 px-3">Overall</th>
-              <th className="text-right py-2 px-2 w-12">CCG Odds</th>
-              <th className="text-left py-2 px-2 w-24"></th>
+              <th className="text-center py-1.5 px-1 sm:py-2 sm:px-2 w-6 sm:w-8">#</th>
+              <th className="text-left py-1.5 px-1.5 sm:py-2 sm:px-3">Team</th>
+              <th className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3">Conf</th>
+              <th className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3 hidden sm:table-cell">Overall</th>
+              <th className="text-right py-1.5 px-1 sm:py-2 sm:px-2 w-10 sm:w-12">CCG Odds</th>
+              <th className="text-left py-1.5 px-1 sm:py-2 sm:px-2 w-12 sm:w-24 hidden sm:table-cell"></th>
             </tr>
           </thead>
           <tbody>
@@ -95,30 +95,30 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
 
               return (
                 <tr key={team.teamName} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="text-center py-2 px-2 text-gray-500 dark:text-gray-400 font-mono">
+                  <td className="text-center py-1.5 px-1 sm:py-2 sm:px-2 text-gray-500 dark:text-gray-400 font-mono">
                     {standings.filter(t => t.rank === team.rank).length > 1 ? `T${team.rank}` : team.rank}
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="py-1.5 px-1.5 sm:py-2 sm:px-3">
                     <Link
                       to={`${teamPath(conference, team.teamName, sport, season)}${dateSuffix}`}
-                      className="flex items-center gap-2 hover:text-blue-600 dark:hover:text-blue-400"
+                      className="flex items-center gap-1.5 sm:gap-2 hover:text-blue-600 dark:hover:text-blue-400"
                     >
-                      <TeamLogoFor team={team.teamName} teams={teams} size="sm" />
-                      <span className="font-medium hover:underline">
+                      <TeamLogoFor team={team.teamName} teams={teams} size="xs" className="sm:w-6 sm:h-6" />
+                      <span className="font-medium hover:underline truncate">
                         <TeamName team={team.teamName} teams={teams} />
                       </span>
                     </Link>
                   </td>
-                  <td className="text-center py-2 px-3 font-mono">
+                  <td className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3 font-mono whitespace-nowrap">
                     {team.confWins}-{team.confLosses}
                   </td>
-                  <td className="text-center py-2 px-3 font-mono text-gray-600 dark:text-gray-400">
+                  <td className="text-center py-1.5 px-1.5 sm:py-2 sm:px-3 font-mono text-gray-600 dark:text-gray-400 hidden sm:table-cell whitespace-nowrap">
                     {team.overallWins}-{team.overallLosses}
                   </td>
-                  <td className="text-right py-2 px-2 font-mono text-sm">
+                  <td className="text-right py-1.5 px-1 sm:py-2 sm:px-2 font-mono whitespace-nowrap">
                     {team.ccgProb > 0 ? percentage : '-'}
                   </td>
-                  <td className="py-2 px-2">
+                  <td className="py-1.5 px-1 sm:py-2 sm:px-2 hidden sm:table-cell">
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded h-4 overflow-hidden">
                       <div
                         className="h-full rounded transition-all duration-300"

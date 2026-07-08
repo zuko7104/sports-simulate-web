@@ -109,7 +109,7 @@ export function ConferenceDashboard() {
               season={selectedSeason}
               historicalDate={historicalDate}
             />
-            <CCGMatchupList matchups={matchups} teams={teams} conference={selectedConference} />
+            <CCGMatchupList matchups={matchups} teams={teams} conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} />
           </div>
 
           {weekImpact && (

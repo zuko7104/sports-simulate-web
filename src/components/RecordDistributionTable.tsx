@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
+import { TeamName } from './TeamName';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -196,9 +197,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
                     className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     <TeamLogoFor team={teamName} teams={teams} size="xs" />
-                    <span className="font-medium text-xs whitespace-nowrap hover:underline">
-                      {teams.teams[teamName]?.display_name ?? teamName}
-                    </span>
+                    <TeamName team={teamName} teams={teams} className="font-medium text-xs whitespace-nowrap hover:underline" />
                     {currentRecord && (
                       <span className="text-xs text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap">
                         ({currentRecord})
@@ -212,7 +211,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
                   return (
                     <td
                       key={record}
-                      className={`text-center py-1.5 px-2 font-mono text-xs ${probTextClass(prob, impossible)}`}
+                      className={`text-center py-1.5 px-2 font-mono text-xs whitespace-nowrap ${probTextClass(prob, impossible)}`}
                       style={{
                         backgroundColor: impossible ? 'transparent' : probBgColor(prob),
                       }}
