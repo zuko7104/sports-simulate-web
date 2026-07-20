@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatProbability } from '../utils/formatProbability';
 import { TeamLogoFor } from './TeamLogo';
@@ -6,6 +6,13 @@ import { TeamName } from './TeamName';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { teamPath } from '../utils/routes';
+
+type SortKey = 'rank' | 'team' | 'conf' | 'overall' | 'ccg';
+type SortDir = 'asc' | 'desc';
+
+// Columns default to "best value first" (descending) except rank and team name,
+// which default to ascending (lowest rank / A-Z).
+const defaultSortDir = (key: SortKey): SortDir => (key === 'team' || key === 'rank' ? 'asc' : 'desc');
 
 interface TeamProbabilityTableProps {
   probabilities: ConferenceProbabilities;
@@ -73,13 +80,67 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
     return sorted;
   }, [conferenceTeams, schedules, probabilities, conferenceTeamSet, season]);
 
+  const [sortKey, setSortKey] = useState<SortKey>('rank');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(defaultSortDir(key));
+    }
+  };
+
+  const sortedStandings = useMemo(() => {
+    const dirMult = sortDir === 'asc' ? 1 : -1;
+    const arr = [...standings];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'rank':
+          cmp = a.rank - b.rank;
+          break;
+        case 'team':
+          cmp = a.teamName.localeCompare(b.teamName);
+          break;
+        case 'conf':
+          cmp = a.winPct - b.winPct;
+          if (cmp === 0) cmp = a.confWins - b.confWins;
+          break;
+        case 'overall': {
+          const aTotal = a.overallWins + a.overallLosses;
+          const bTotal = b.overallWins + b.overallLosses;
+          const aPct = aTotal > 0 ? a.overallWins / aTotal : 0;
+          const bPct = bTotal > 0 ? b.overallWins / bTotal : 0;
+          cmp = aPct - bPct;
+          if (cmp === 0) cmp = a.overallWins - b.overallWins;
+          break;
+        }
+        case 'ccg':
+          cmp = a.ccgProb - b.ccgProb;
+          break;
+      }
+      return cmp * dirMult;
+    });
+    return arr;
+  }, [standings, sortKey, sortDir]);
+
+  const sortIndicator = (key: SortKey) => {
+    if (sortKey !== key) return null;
+    return <span aria-hidden="true">{sortDir === 'asc' ? '\u00a0\u25B2' : '\u00a0\u25BC'}</span>;
+  };
+
+  const ariaSort = (key: SortKey): 'ascending' | 'descending' | 'none' =>
+    sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+
   return (
     <div className="card">
       <h2 className="card-header">Conference Standings</h2>
       <div className="overflow-x-auto">
         <table className="w-full table-fixed text-xs sm:text-sm">
           <colgroup>
-            <col className="w-5 sm:w-8" />
+            <col className="w-9 sm:w-11" />
             <col />
             <col className="w-10 sm:w-14" />
             <col className="w-12 sm:w-14" />
@@ -88,15 +149,55 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
           </colgroup>
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-2">#</th>
-              <th className="text-left py-1 px-0.5 sm:py-2 sm:px-3">Team</th>
-              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-3">Conf</th>
-              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-3">Overall</th>
-              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-2" colSpan={2}>CCG Odds</th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-2" aria-sort={ariaSort('rank')}>
+                <button
+                  type="button"
+                  onClick={() => handleSort('rank')}
+                  className="w-full text-center whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  #{sortIndicator('rank')}
+                </button>
+              </th>
+              <th className="text-left py-1 px-0.5 sm:py-2 sm:px-3" aria-sort={ariaSort('team')}>
+                <button
+                  type="button"
+                  onClick={() => handleSort('team')}
+                  className="whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Team{sortIndicator('team')}
+                </button>
+              </th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-3" aria-sort={ariaSort('conf')}>
+                <button
+                  type="button"
+                  onClick={() => handleSort('conf')}
+                  className="w-full text-center whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Conf{sortIndicator('conf')}
+                </button>
+              </th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-3" aria-sort={ariaSort('overall')}>
+                <button
+                  type="button"
+                  onClick={() => handleSort('overall')}
+                  className="w-full text-center whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  Overall{sortIndicator('overall')}
+                </button>
+              </th>
+              <th className="text-center py-1 px-0.5 sm:py-2 sm:px-2" colSpan={2} aria-sort={ariaSort('ccg')}>
+                <button
+                  type="button"
+                  onClick={() => handleSort('ccg')}
+                  className="w-full text-center whitespace-nowrap hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  CCG Odds{sortIndicator('ccg')}
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {standings.map((team) => {
+            {sortedStandings.map((team) => {
               const teamMeta = teams.teams[team.teamName];
               const percentage = formatProbability(team.ccgProb);
               const hasChance = team.ccgProb > 0;
