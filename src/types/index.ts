@@ -40,6 +40,7 @@ export interface EveryOutcome {
   remaining_games: [string, string][];
   game_probabilities: Record<string, number>;  // game_key -> probability of team1 winning
   game_dates: Record<string, string>;  // game_key -> date string (YYYY-MM-DD)
+  game_kickoffs?: Record<string, string | null>;  // game_key -> ISO kickoff datetime, or null if unknown
   scenarios: Record<string, WhatIfScenario>;
 }
 
@@ -63,6 +64,10 @@ export interface ConferenceMetadata {
   logo_light: string | null;
   logo_dark: string | null;
   teams: string[];
+  /** False for "basic" (no-simulation) groups: FCS conferences, the 2025
+   * Pac-12, and independents. Missing/undefined is treated as true for
+   * backwards compatibility with older teams.json files. */
+  has_simulation?: boolean;
 }
 
 export interface SeasonTeams {
@@ -89,6 +94,7 @@ export interface DataIndex {
 // Schedule types
 export interface GameResult {
   date: string;
+  kickoff?: string | null;
   opponent: string;
   is_home: boolean;
   neutral: boolean;
@@ -199,6 +205,30 @@ export interface TimelineData {
   teams: Record<string, TeamTimelineEntry[]>;
 }
 
+// Ranking types (AP poll / CFP committee rankings, one file per week)
+
+export interface RankingRow {
+  rank: number;
+  team: string;
+  conference?: string | null;
+  points?: number | null;
+  first_place_votes?: number | null;
+}
+
+export interface PollSnapshot {
+  poll: string;
+  source_date: string;
+  cfbd_week: number;
+  ranks: RankingRow[];
+}
+
+export interface WeekRankings {
+  week: number;
+  season: number;
+  ap?: PollSnapshot;
+  cfp?: PollSnapshot;
+}
+
 // Client-side tiebreaker resolution types
 
 /** A completed game result for tiebreaker resolution */
@@ -216,6 +246,8 @@ export interface TeamRecord {
   name: string;
   conference: string;
   games: ResolvedGame[];
+  /** Season year, used to look up year-specific non-conference exemptions (see conferenceGame.ts) */
+  season?: string;
 }
 
 /** Conference state built from schedule data + user selections */

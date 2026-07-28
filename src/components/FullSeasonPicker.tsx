@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
+import { RankingBadge } from './RankingBadge';
 import { dateToWeekNumber } from '../utils/dateUtils';
 import type { SeasonTeams, TiebreakerResult, ConferenceState } from '../types';
 import type { RemainingGame } from '../utils/seasonBuilder';
+import type { ResolvedRanking } from '../utils/rankings';
 import { teamPath } from '../utils/routes';
 
 interface FullSeasonPickerProps {
@@ -21,6 +23,7 @@ interface FullSeasonPickerProps {
   tiebreakerResult: TiebreakerResult | null;
   allGamesSelected: boolean;
   week1Start?: string;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
 interface WeekGroup {
@@ -85,6 +88,7 @@ export function FullSeasonPicker({
   tiebreakerResult,
   allGamesSelected,
   week1Start,
+  rankings,
 }: FullSeasonPickerProps) {
   const selectedCount = Object.keys(selectedWinners).length;
   const totalGames = remainingGames.length;
@@ -153,6 +157,7 @@ export function FullSeasonPicker({
                                 <span className={selected === game.awayTeam ? 'font-semibold' : ''}>
                                   {team1Meta?.display_name ?? game.awayTeam}
                                 </span>
+                                <RankingBadge team={game.awayTeam} rankings={rankings} />
                               </div>
                               <span className={`text-xs font-mono ${team1Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {team1Pct}%
@@ -174,6 +179,7 @@ export function FullSeasonPicker({
                                 <span className={selected === game.homeTeam ? 'font-semibold' : ''}>
                                   {team2Meta?.display_name ?? game.homeTeam}
                                 </span>
+                                <RankingBadge team={game.homeTeam} rankings={rankings} />
                               </div>
                               <span className={`text-xs font-mono ${team2Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {team2Pct}%
@@ -230,6 +236,7 @@ export function FullSeasonPicker({
                     <Link to={teamPath(conference, tiebreakerResult.ccgParticipants[0], sport, season)} className="font-bold text-lg hover:underline">
                       {teams.teams[tiebreakerResult.ccgParticipants[0]]?.display_name ?? tiebreakerResult.ccgParticipants[0]}
                     </Link>
+                    <RankingBadge team={tiebreakerResult.ccgParticipants[0]} rankings={rankings} />
                     <span className="text-xs text-gray-500 dark:text-gray-400">#1 Seed</span>
                   </div>
                   <span className="text-gray-400 dark:text-gray-500 text-2xl font-light">vs</span>
@@ -238,6 +245,7 @@ export function FullSeasonPicker({
                     <Link to={teamPath(conference, tiebreakerResult.ccgParticipants[1], sport, season)} className="font-bold text-lg hover:underline">
                       {teams.teams[tiebreakerResult.ccgParticipants[1]]?.display_name ?? tiebreakerResult.ccgParticipants[1]}
                     </Link>
+                    <RankingBadge team={tiebreakerResult.ccgParticipants[1]} rankings={rankings} />
                     <span className="text-xs text-gray-500 dark:text-gray-400">#2 Seed</span>
                   </div>
                 </div>
@@ -293,6 +301,7 @@ export function FullSeasonPicker({
                           <Link to={teamPath(conference, teamName, sport, season)} className={`flex-1 hover:underline ${isCCG ? 'font-semibold' : ''}`}>
                             {teamMeta?.display_name ?? teamName}
                           </Link>
+                          <RankingBadge team={teamName} rankings={rankings} />
                           {confRecord && (
                             <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">{confRecord}</span>
                           )}
@@ -321,6 +330,7 @@ export function FullSeasonPicker({
                       <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-2">
                         <TeamLogoFor team={log.teamName} teams={teams} size="sm" />
                         #{log.seed} Seed: {teams.teams[log.teamName]?.display_name ?? log.teamName}
+                        <RankingBadge team={log.teamName} rankings={rankings} />
                       </h3>
                       {log.method === 'outright' ? (
                         <p className="text-sm text-gray-600 dark:text-gray-400 ml-7">
@@ -347,7 +357,14 @@ export function FullSeasonPicker({
                                 )}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                Teams: {step.teamsEntering.map((t) => teams.teams[t]?.display_name ?? t).join(', ')}
+                                Teams:{' '}
+                                {step.teamsEntering.map((t, i) => (
+                                  <span key={t}>
+                                    {i > 0 && ', '}
+                                    {teams.teams[t]?.display_name ?? t}
+                                    <RankingBadge team={t} rankings={rankings} />
+                                  </span>
+                                ))}
                               </div>
                               {Object.keys(step.details).length > 0 && (
                                 <div className="mt-1 space-y-0.5">
@@ -363,6 +380,7 @@ export function FullSeasonPicker({
                                       >
                                         <TeamLogoFor team={t} teams={teams} size="xs" />
                                         <span>{teams.teams[t]?.display_name ?? t}:</span>
+                                        <RankingBadge team={t} rankings={rankings} />
                                         <span className="font-mono">{step.details[t] ?? '—'}</span>
                                         {isAdvancing && <span className="text-green-600 dark:text-green-400">✓</span>}
                                         {isEliminated && <span className="text-red-400">✗</span>}
@@ -398,6 +416,7 @@ export function FullSeasonPicker({
               >
                 {teams.teams[tiebreakerResult!.ccgParticipants[0]]?.display_name ?? tiebreakerResult!.ccgParticipants[0]}
               </Link>
+              <RankingBadge team={tiebreakerResult!.ccgParticipants[0]} rankings={rankings} />
             </div>
             <span className="text-gray-400 dark:text-gray-500 font-light text-lg">vs</span>
             <div className="flex items-center gap-1.5">
@@ -408,6 +427,7 @@ export function FullSeasonPicker({
               >
                 {teams.teams[tiebreakerResult!.ccgParticipants[1]]?.display_name ?? tiebreakerResult!.ccgParticipants[1]}
               </Link>
+              <RankingBadge team={tiebreakerResult!.ccgParticipants[1]} rankings={rankings} />
             </div>
           </div>
         </div>

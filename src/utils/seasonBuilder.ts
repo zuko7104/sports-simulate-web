@@ -85,7 +85,7 @@ export function buildConferenceState(
 
   // Initialize team records
   for (const teamName of confTeamNames) {
-    teamRecords.set(teamName, { name: teamName, conference, games: [] });
+    teamRecords.set(teamName, { name: teamName, conference, games: [], season });
   }
 
   // Track which games we've already added (to avoid duplicates)

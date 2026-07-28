@@ -6,6 +6,7 @@ import { TeamName } from './TeamName';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { teamPath } from '../utils/routes';
+import type { ResolvedRanking } from '../utils/rankings';
 
 type SortKey = 'rank' | 'team' | 'conf' | 'overall' | 'ccg';
 type SortDir = 'asc' | 'desc';
@@ -22,9 +23,10 @@ interface TeamProbabilityTableProps {
   sport?: string;
   season?: string;
   historicalDate?: string;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
-export function TeamProbabilityTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season = '2025', historicalDate }: TeamProbabilityTableProps) {
+export function TeamProbabilityTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season = '2025', historicalDate, rankings }: TeamProbabilityTableProps) {
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conference = conferenceProp ?? probabilities.conference;
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
@@ -214,7 +216,7 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
                     >
                       <TeamLogoFor team={team.teamName} teams={teams} size="xs" className="shrink-0 sm:w-6 sm:h-6" />
                       <span className="font-medium hover:underline truncate min-w-0">
-                        <TeamName team={team.teamName} teams={teams} />
+                        <TeamName team={team.teamName} teams={teams} rankings={rankings} />
                       </span>
                     </Link>
                   </td>

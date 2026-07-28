@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AdSlot } from '../components/AdSlot';
 import { TeamLogoFor } from '../components/TeamLogo';
 import { TeamSchedule } from '../components/TeamSchedule';
 import { RecordProbabilities } from '../components/RecordProbabilities';
 import { LossScenarios } from '../components/LossScenarios';
 import { WeekImpactTable } from '../components/WeekImpactTable';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
+import { RankingBadge } from '../components/RankingBadge';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { type DatesConfig } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
 import { expandTeamAliases } from '../utils/teamAliases';
+import { resolveRankings, type ResolvedRanking } from '../utils/rankings';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath, teamPath } from '../utils/routes';
 import type {
@@ -80,11 +83,12 @@ export function TeamDetailPage() {
   const [schedules, setSchedules] = useState<Schedules | null>(null);
   const [probabilities, setProbabilities] = useState<ConferenceProbabilities | null>(null);
   const [matchups, setMatchups] = useState<CCGMatchups | null>(null);
-  const [_everyOutcome, setEveryOutcome] = useState<EveryOutcome | null>(null);
+  const [everyOutcome, setEveryOutcome] = useState<EveryOutcome | null>(null);
   const [lossScenarioData, setLossScenarioData] = useState<LossScenarioData | null>(null);
   const [weekImpactData, setWeekImpactData] = useState<WeekImpact | null>(null);
   const [timeline, setTimeline] = useState<TimelineData | null>(null);
   const [datesConfig, setDatesConfig] = useState<DatesConfig | null>(null);
+  const [rankings, setRankings] = useState<Record<string, ResolvedRanking> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<string | null>(null);
@@ -96,6 +100,18 @@ export function TeamDetailPage() {
 
       setLoading(true);
       setError(null);
+      // Reset all optional (per-conference) data before fetching - otherwise
+      // navigating client-side from a team in a simulated conference to a
+      // team in a group without that dataset (e.g. an independent like Notre
+      // Dame) would leave the previous team's stale data on screen, since
+      // this component instance is reused across the route change and these
+      // fetches are skipped/silently fail instead of clearing state.
+      setProbabilities(null);
+      setMatchups(null);
+      setEveryOutcome(null);
+      setLossScenarioData(null);
+      setWeekImpactData(null);
+      setTimeline(null);
 
       try {
         // Load teams.json to get team metadata
@@ -121,6 +137,7 @@ export function TeamDetailPage() {
         setLatestDate(datesData.latest_date);
         const latestDate = historicalDate ?? datesData.latest_date;
         setCurrentDate(latestDate);
+        resolveRankings(sport, season, latestDate, datesData.week1_start).then(setRankings);
 
         // Load schedules.json
         const BASE = (path: string) => dataUrl(`${sport}/${season}/${path}`);
@@ -129,24 +146,39 @@ export function TeamDetailPage() {
         const schedulesData: Schedules = await schedulesRes.json();
         setSchedules(schedulesData);
 
-        // Load conference probabilities
+        // Load conference probabilities (optional: "basic" no-simulation
+        // groups - FCS conferences, the 2025 Pac-12, independents - don't
+        // have this file, and the page should still render schedule/record
+        // info without it).
         const probsRes = await fetch(BASE(`${latestDate}/${conference}_probabilities.json`));
-        if (!probsRes.ok) throw new Error('Failed to load probability data');
-        const probsData: ConferenceProbabilities = await probsRes.json();
-        setProbabilities(probsData);
-
-        // Load CCG matchups
-        const matchupsRes = await fetch(BASE(`${latestDate}/${conference}_ccg_matchups.json`));
-        if (matchupsRes.ok) {
-          const matchupsData: CCGMatchups = await matchupsRes.json();
-          setMatchups(matchupsData);
+        if (probsRes.ok) {
+          const ct = probsRes.headers.get('content-type');
+          if (ct?.includes('application/json')) {
+            const probsData: ConferenceProbabilities = await probsRes.json();
+            setProbabilities(probsData);
+          }
         }
 
-        // Load every outcome data (for per-game CCG probabilities)
+        // Load CCG matchups (optional: "basic" no-simulation groups don't
+        // have this file; a dev-server SPA fallback can return 200 + HTML
+        // for a missing file, so content-type must be checked too)
+        const matchupsRes = await fetch(BASE(`${latestDate}/${conference}_ccg_matchups.json`));
+        if (matchupsRes.ok) {
+          const ct = matchupsRes.headers.get('content-type');
+          if (ct?.includes('application/json')) {
+            const matchupsData: CCGMatchups = await matchupsRes.json();
+            setMatchups(matchupsData);
+          }
+        }
+
+        // Load every outcome data (for per-game CCG probabilities; optional)
         const everyOutcomeRes = await fetch(BASE(`${latestDate}/${conference}_every_outcome.json`));
         if (everyOutcomeRes.ok) {
-          const everyOutcomeData: EveryOutcome = await everyOutcomeRes.json();
-          setEveryOutcome(everyOutcomeData);
+          const ct = everyOutcomeRes.headers.get('content-type');
+          if (ct?.includes('application/json')) {
+            const everyOutcomeData: EveryOutcome = await everyOutcomeRes.json();
+            setEveryOutcome(everyOutcomeData);
+          }
         }
 
         // Load loss scenarios
@@ -332,6 +364,7 @@ export function TeamDetailPage() {
         </Link>
         <span className="mx-2 text-gray-400 dark:text-gray-600">/</span>
         <span className="text-gray-600 dark:text-gray-400">{teamMeta.display_name}</span>
+        <RankingBadge team={teamName} rankings={rankings} className="ml-1" />
       </nav>
 
       {/* Team Header */}
@@ -340,8 +373,9 @@ export function TeamDetailPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {teamMeta.display_name}
+            <RankingBadge team={teamName} rankings={rankings} className="ml-1.5 align-super" />
             {teamMeta.mascot && (
-              <span className="text-lg text-gray-400 dark:text-gray-500 font-normal ml-2">
+              <span className="block sm:inline text-lg text-gray-400 dark:text-gray-500 font-normal sm:ml-2">
                 {teamMeta.mascot}
               </span>
             )}
@@ -410,7 +444,7 @@ export function TeamDetailPage() {
         );
       })()}
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className={`grid gap-8 ${teamProbs ? 'lg:grid-cols-2' : ''}`}>
         {/* Schedule */}
         <div className="card">
           <h2 className="card-header">Schedule & Results</h2>
@@ -421,6 +455,8 @@ export function TeamDetailPage() {
             season={season}
             conference={conference ?? urlConference}
             historicalDate={historicalDate}
+            datesConfig={datesConfig}
+            rankings={rankings}
           />
         </div>
 
@@ -444,12 +480,17 @@ export function TeamDetailPage() {
         )}
       </div>
 
+      <AdSlot slotId="team-top" className="mt-8" />
+
       {/* CCG Matchup Probabilities */}
       {teamMatchups && teamMatchups.length > 0 && (
         <div className="card mt-8">
           <h2 className="card-header">
             Most Likely CCG Opponents
           </h2>
+          <p className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
+            if <TeamLogoFor team={teamName} teams={teams} size="xs" /> makes the CCG
+          </p>
           <div className="space-y-2 mt-4">
             {teamMatchups.map(({ opponent, normalizedProbability }) => {
               const oppMeta = teams.teams[opponent];
@@ -466,6 +507,7 @@ export function TeamDetailPage() {
                     >
                       {oppMeta?.display_name ?? opponent}
                     </Link>
+                    <RankingBadge team={opponent} rankings={rankings} />
                     <TeamLogoFor team={opponent} teams={teams} size="xs" />
                   </div>
                   <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden relative">
@@ -502,6 +544,8 @@ export function TeamDetailPage() {
             sport={sport}
             season={season}
             historicalDate={historicalDate}
+            everyOutcome={everyOutcome}
+            rankings={rankings}
           />
         </div>
       )}
@@ -521,6 +565,8 @@ export function TeamDetailPage() {
         </div>
       )}
 
+      <AdSlot slotId="team-mid" className="mt-8" />
+
       {/* Probability over time */}
       {timeline && (
         <div className="card mt-8">
@@ -530,9 +576,12 @@ export function TeamDetailPage() {
             teams={teams}
             highlightTeam={teamName}
             datesConfig={datesConfig}
+            rankings={rankings}
           />
         </div>
       )}
+
+      <AdSlot slotId="team-bottom" className="mt-8" />
     </div>
   );
 }

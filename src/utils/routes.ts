@@ -13,7 +13,10 @@
 export const DEFAULT_SPORT = 'cfb';
 export const CURRENT_SEASON = '2025';
 
-export const KNOWN_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
+// Valid conference/group codes are no longer a static list - they're
+// derived dynamically from teams.json's `conferences` dict (which includes
+// both simulated conferences and "basic" no-simulation groups like FCS
+// conferences, the Pac-12, and independents). See useKnownConferences.ts.
 
 export const SPORT_DISPLAY_NAMES: Record<string, string> = {
   cfb: 'CFB',
@@ -35,16 +38,35 @@ export function conferencePath(
   sport: string = DEFAULT_SPORT,
   year: string = CURRENT_SEASON,
 ): string {
-  return `${sportYearPath(sport, year)}/${conference}`;
+  return `${sportYearPath(sport, year)}/${encodeURIComponent(conference)}`;
 }
 
 export function conferenceSubPath(
   conference: string,
-  sub: 'what-if' | 'tiebreakers' | 'history',
+  sub: 'what-if' | 'tiebreakers' | 'flowchart',
   sport: string = DEFAULT_SPORT,
   year: string = CURRENT_SEASON,
 ): string {
   return `${conferencePath(conference, sport, year)}/${sub}`;
+}
+
+/**
+ * Path to navigate to when switching to `conference` from a simulation-only
+ * sub-page (What-If, Tiebreakers, Flowchart). If the destination
+ * conference has no simulation, those sub-pages have nothing to show, so
+ * this falls back to the conference's overview page instead - mirroring the
+ * same has_simulation gating the top nav uses to hide those tabs.
+ */
+export function conferenceSwitchPath(
+  conference: string,
+  sub: 'what-if' | 'tiebreakers' | 'flowchart',
+  hasSimulation: boolean,
+  sport: string = DEFAULT_SPORT,
+  year: string = CURRENT_SEASON,
+): string {
+  return hasSimulation
+    ? conferenceSubPath(conference, sub, sport, year)
+    : conferencePath(conference, sport, year);
 }
 
 export function teamPath(

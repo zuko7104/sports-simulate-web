@@ -14,10 +14,12 @@ import type {
 import type { DatesConfig } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
 import { expandTeamAliases } from '../utils/teamAliases';
+import { resolveRankings, type ResolvedRanking } from '../utils/rankings';
 
 interface UseConferenceDataResult {
   index: DataIndex | null;
   teams: SeasonTeams | null;
+  rankings: Record<string, ResolvedRanking> | null;
   schedules: Schedules | null;
   probabilities: ConferenceProbabilities | null;
   matchups: CCGMatchups | null;
@@ -46,6 +48,7 @@ export function useConferenceData(): UseConferenceDataResult {
   const [tiebreakers, setTiebreakers] = useState<TiebreakerData | null>(null);
   const [lossScenarios, setLossScenarios] = useState<LossScenarioData | null>(null);
   const [timeline, setTimeline] = useState<TimelineData | null>(null);
+  const [rankings, setRankings] = useState<Record<string, ResolvedRanking> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState<string | null>(null);
@@ -91,6 +94,7 @@ export function useConferenceData(): UseConferenceDataResult {
 
       // If no date provided, fetch the latest date from dates.json
       let datePath = date;
+      let week1Start: string | undefined;
       if (!datePath) {
         const datesRes = await fetch(r(`${sport}/${season}/dates.json`));
         if (datesRes.ok) {
@@ -98,6 +102,7 @@ export function useConferenceData(): UseConferenceDataResult {
           if (contentType?.includes('application/json')) {
             const datesData: DatesConfig = await datesRes.json();
             datePath = datesData.latest_date;
+            week1Start = datesData.week1_start;
             setAvailableDates(datesData.dates || []);
             setLatestDate(datesData.latest_date);
             setDatesConfig(datesData);
@@ -110,6 +115,7 @@ export function useConferenceData(): UseConferenceDataResult {
           const contentType = datesRes.headers.get('content-type');
           if (contentType?.includes('application/json')) {
             const datesData: DatesConfig = await datesRes.json();
+            week1Start = datesData.week1_start;
             setAvailableDates(datesData.dates || []);
             setLatestDate(datesData.latest_date);
             setDatesConfig(datesData);
@@ -122,14 +128,15 @@ export function useConferenceData(): UseConferenceDataResult {
       }
 
       setCurrentDate(datePath);
+      resolveRankings(sport, season, datePath, week1Start).then(setRankings);
 
       // Load all data in parallel
       // teams.json and schedules.json are at date level, other files are conference-specific
       const [teamsRes, schedulesRes, probsRes, matchupsRes, everyOutcomeRes] = await Promise.all([
         fetch(r(`${sport}/${season}/teams.json`)),
         fetch(r(`${sport}/${season}/${datePath}/schedules.json`)),
-        fetch(r(`${sport}/${season}/${datePath}/${conference}_probabilities.json`)),
-        fetch(r(`${sport}/${season}/${datePath}/${conference}_ccg_matchups.json`)),
+        fetch(r(`${sport}/${season}/${datePath}/${conference}_probabilities.json`)).catch(() => null),
+        fetch(r(`${sport}/${season}/${datePath}/${conference}_ccg_matchups.json`)).catch(() => null),
         fetch(r(`${sport}/${season}/${datePath}/${conference}_every_outcome.json`)).catch(() => null),
       ]);
 
@@ -143,20 +150,40 @@ export function useConferenceData(): UseConferenceDataResult {
 
       if (!teamsRes.ok) throw new Error('Failed to load teams');
       if (!schedulesRes.ok) throw new Error('Failed to load schedules');
-      if (!probsRes.ok) throw new Error('Failed to load probabilities');
-      if (!matchupsRes.ok) throw new Error('Failed to load matchups');
 
-      const [teamsData, schedulesData, probsData, matchupsData] = await Promise.all([
+      const [teamsData, schedulesData] = await Promise.all([
         teamsRes.json(),
         schedulesRes.json(),
-        probsRes.json(),
-        matchupsRes.json(),
       ]);
 
       setTeams(expandTeamAliases(teamsData));
       setSchedules(schedulesData);
-      setProbabilities(probsData);
-      setMatchups(matchupsData);
+
+      // Probabilities/matchups are optional: "basic" (no-simulation)
+      // conferences — FCS conferences, the 2025 Pac-12, independents — don't
+      // have these files, and should render a standings-only view instead of
+      // erroring out.
+      if (probsRes?.ok) {
+        const ct = probsRes.headers.get('content-type');
+        if (ct?.includes('application/json')) {
+          setProbabilities(await probsRes.json());
+        } else {
+          setProbabilities(null);
+        }
+      } else {
+        setProbabilities(null);
+      }
+
+      if (matchupsRes?.ok) {
+        const ct = matchupsRes.headers.get('content-type');
+        if (ct?.includes('application/json')) {
+          setMatchups(await matchupsRes.json());
+        } else {
+          setMatchups(null);
+        }
+      } else {
+        setMatchups(null);
+      }
 
       // Every outcome is optional (only exists after running --all-outcomes)
       if (everyOutcomeRes?.ok) {
@@ -237,6 +264,7 @@ export function useConferenceData(): UseConferenceDataResult {
     tiebreakers,
     lossScenarios,
     timeline,
+    rankings,
     loading,
     error,
     currentDate,

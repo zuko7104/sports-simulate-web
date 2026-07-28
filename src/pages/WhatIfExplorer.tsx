@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { useWhatIf } from '../hooks/useWhatIf';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { AdSlot } from '../components/AdSlot';
 import { WhatIfPicker } from '../components/WhatIfPicker';
 import { FullSeasonPicker } from '../components/FullSeasonPicker';
 import { ConferenceSelector } from '../components/ConferenceSelector';
 import { getRemainingConferenceGames, buildConferenceState, fillWithFavorites, selectionProbability as calcSelectionProb } from '../utils/seasonBuilder';
 import { resolveChampionship } from '../utils/tiebreakers';
 import { dateToWeekNumber } from '../utils/dateUtils';
-import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSubPath } from '../utils/routes';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSwitchPath } from '../utils/routes';
 
-const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
+const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC', 'AAC', 'MWC', 'CUSA', 'MAC', 'SBC'];
 
 type Mode = 'next-weeks' | 'full-season';
 
@@ -22,11 +23,13 @@ export function WhatIfExplorer() {
     conference: selectedConference = 'B12',
   } = useParams<{ sport: string; year: string; conference: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const historicalDate = searchParams.get('date') ?? undefined;
   const [mode, setMode] = useState<Mode>('next-weeks');
   const [selectedWinners, setSelectedWinners] = useState<Record<string, string>>({});
   const [fullSeasonWinners, setFullSeasonWinners] = useState<Record<string, string>>({});
 
-  const { teams, schedules, everyOutcome, loading, error, currentDate, datesConfig, loadConference, probabilities: dashboardProbabilities, matchups: dashboardMatchups } = useConferenceData();
+  const { teams, schedules, everyOutcome, rankings, loading, error, currentDate, datesConfig, loadConference, probabilities: dashboardProbabilities, matchups: dashboardMatchups } = useConferenceData();
   const { setWinner, clearSelections, probabilities, gameInfos, selectionProbability } = useWhatIf(
     everyOutcome,
     selectedWinners,
@@ -47,10 +50,10 @@ export function WhatIfExplorer() {
 
 
   useEffect(() => {
-    loadConference(selectedSport, selectedSeason, selectedConference);
+    loadConference(selectedSport, selectedSeason, selectedConference, historicalDate);
     setSelectedWinners({});
     setFullSeasonWinners({});
-  }, [selectedConference, selectedSport, selectedSeason, loadConference]);
+  }, [selectedConference, selectedSport, selectedSeason, historicalDate, loadConference]);
 
   const conferences = teams?.conferences
     ? Object.keys(teams.conferences)
@@ -60,7 +63,9 @@ export function WhatIfExplorer() {
   usePageTitle(`${conferenceDisplayName} What-If`);
 
   const handleConferenceChange = (conf: string) => {
-    navigate(conferenceSubPath(conf, 'what-if', selectedSport, selectedSeason));
+    const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
+    const hasSimulation = teams?.conferences[conf]?.has_simulation !== false;
+    navigate(`${conferenceSwitchPath(conf, 'what-if', hasSimulation, selectedSport, selectedSeason)}${dateSuffix}`);
   };
 
   // Full-season mode data
@@ -160,6 +165,8 @@ export function WhatIfExplorer() {
         </div>
       </div>
 
+      <AdSlot slotId="whatif-top" className="mb-6" />
+
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -196,6 +203,7 @@ export function WhatIfExplorer() {
               gameInfos={gameInfos}
               selectionProbability={selectionProbability}
               week1Start={datesConfig?.week1_start}
+              rankings={rankings}
             />
           )}
         </>
@@ -217,6 +225,7 @@ export function WhatIfExplorer() {
           tiebreakerResult={tiebreakerResult}
           allGamesSelected={allGamesSelected}
           week1Start={datesConfig?.week1_start}
+          rankings={rankings}
         />
       )}
     </div>

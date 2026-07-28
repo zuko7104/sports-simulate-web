@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
-import type { WeekImpact, SeasonTeams } from '../types';
+import { RankingBadge } from './RankingBadge';
+import type { WeekImpact, SeasonTeams, EveryOutcome } from '../types';
 import { teamPath } from '../utils/routes';
+import { gameSortKey } from '../utils/dateUtils';
+import { orderGames, collapseClinchOutcomes, gameKeyFor } from '../utils/ccgOutcomeCollapse';
+import type { ResolvedRanking } from '../utils/rankings';
 
 interface WeekImpactTableProps {
   weekImpact: WeekImpact;
@@ -14,6 +18,9 @@ interface WeekImpactTableProps {
   sport?: string;
   season?: string;
   historicalDate?: string;
+  /** Powers "Ways to Clinch CCG Spot This Week" — omit to hide that section. */
+  everyOutcome?: EveryOutcome | null;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
 function formatPercent(value: number): string {
@@ -33,7 +40,7 @@ function impactColor(value: number): string {
   return 'text-gray-500 dark:text-gray-400';
 }
 
-export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelector = false, conference, sport, season, historicalDate }: WeekImpactTableProps) {
+export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelector = false, conference, sport, season, historicalDate, everyOutcome, rankings }: WeekImpactTableProps) {
   const teamNames = Object.keys(weekImpact.teams).sort(
     (a, b) => (weekImpact.teams[b].current_ccg_probability) - (weekImpact.teams[a].current_ccg_probability)
   );
@@ -42,10 +49,42 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const activeTeam = selectedTeam ?? selectorTeam;
 
+  const orderedGames = useMemo(() => (everyOutcome ? orderGames(everyOutcome) : []), [everyOutcome]);
+
+  // The Ways to Lock table's underlying data source, filtered to just
+  // `activeTeam` clinching a spot (not a specific matchup) — replaces a
+  // separate (and inconsistent) backend computation that only considered
+  // this week's games in isolation. Rows are already collapsed to the
+  // simplest set of deciding games; every row is at/above ~100% confidence
+  // by construction (see collapseClinchOutcomes). A heavily-favored team can
+  // have thousands of long-shot combinations that technically clinch it -
+  // filtered out here the same way Ways to Lock hides its own unlikely tail,
+  // since this compact card (unlike that full page) has no room for a
+  // "show more" toggle.
+  const CLINCH_ROW_PROBABILITY_FLOOR = 0.001;
+  const clinchRows = useMemo(() => {
+    if (!everyOutcome || !activeTeam) return [];
+    return collapseClinchOutcomes(everyOutcome, orderedGames, activeTeam)
+      .filter((row) => row.probability >= CLINCH_ROW_PROBABILITY_FLOOR);
+  }, [everyOutcome, orderedGames, activeTeam]);
+
   const teamImpact = weekImpact.teams[activeTeam];
   if (!teamImpact) return null;
 
-  const hasClinching = teamImpact.clinching_scenarios.length > 0;
+  const sortedGameImpacts = (() => {
+    if (!everyOutcome) return teamImpact.game_impacts;
+    const dates = everyOutcome.game_dates ?? {};
+    const kickoffs = everyOutcome.game_kickoffs ?? {};
+    return [...teamImpact.game_impacts].sort((a, b) => {
+      const keyA = gameKeyFor([a.away_team, a.home_team]);
+      const keyB = gameKeyFor([b.away_team, b.home_team]);
+      const sortA = gameSortKey(dates[keyA] ?? '9999-99-99', kickoffs[keyA], a.away_team);
+      const sortB = gameSortKey(dates[keyB] ?? '9999-99-99', kickoffs[keyB], b.away_team);
+      return sortA.localeCompare(sortB);
+    });
+  })();
+
+  const hasClinching = clinchRows.length > 0;
 
   const content = (
     <div>
@@ -71,6 +110,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                 >
                   <TeamLogoFor team={team} teams={teams} size="xs" />
                   {meta?.display_name ?? team}
+                  <RankingBadge team={team} rankings={rankings} />
                 </button>
               );
             })}
@@ -113,7 +153,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
             </tr>
           </thead>
           <tbody>
-            {teamImpact.game_impacts.map((game, i) => {
+            {sortedGameImpacts.map((game, i) => {
               const isHighlighted = hoveredTeam === game.away_team || hoveredTeam === game.home_team;
               return (
               <tr key={i} className={`border-b border-gray-100 dark:border-gray-800 transition-colors ${isHighlighted ? 'bg-yellow-100 dark:bg-yellow-500/20' : ''}`}>
@@ -124,7 +164,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                       to={`${teamPath(teams.teams[game.away_team]?.conference ?? conference ?? 'B12', game.away_team, sport, season)}${historicalDate ? `?date=${historicalDate}` : ''}`}
                       className="text-xs sm:text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline whitespace-nowrap"
                     >
-                      <TeamName team={game.away_team} teams={teams} />
+                      <TeamName team={game.away_team} teams={teams} rankings={rankings} />
                     </Link>
                     <span className="text-xs text-gray-400 dark:text-gray-500">@</span>
                     <TeamLogoFor team={game.home_team} teams={teams} size="xs" />
@@ -132,7 +172,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                       to={`${teamPath(teams.teams[game.home_team]?.conference ?? conference ?? 'B12', game.home_team, sport, season)}${historicalDate ? `?date=${historicalDate}` : ''}`}
                       className="text-xs sm:text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline whitespace-nowrap"
                     >
-                      <TeamName team={game.home_team} teams={teams} />
+                      <TeamName team={game.home_team} teams={teams} rankings={rankings} />
                     </Link>
                   </div>
                 </td>
@@ -175,6 +215,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                   >
                     <TeamLogoFor team={w} teams={teams} size="xs" />
                     {teams.teams[w]?.display_name ?? w}
+                    <RankingBadge team={w} rankings={rankings} />
                   </span>
                 ))}
               </div>
@@ -187,7 +228,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
           {teamImpact.best_realistic_outcome && (
             <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
               <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-1">
-                Best and Most Realistic Winner Combination for <TeamLogoFor team={activeTeam} teams={teams} size="xs" />
+                Most Realistic Good Winner Combination for <TeamLogoFor team={activeTeam} teams={teams} size="xs" />
               </h4>
               <div className="flex flex-wrap gap-1 mb-1">
                 {teamImpact.best_realistic_outcome.winners.map((w) => (
@@ -199,6 +240,7 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
                   >
                     <TeamLogoFor team={w} teams={teams} size="xs" />
                     {teams.teams[w]?.display_name ?? w}
+                    <RankingBadge team={w} rankings={rankings} />
                   </span>
                 ))}
               </div>
@@ -218,29 +260,36 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
             Ways to Clinch CCG Spot This Week
           </h4>
           <div className="space-y-2">
-            {teamImpact.clinching_scenarios.slice(0, 10).map((scenario, i) => (
-              <div key={i} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-950 rounded border border-yellow-200 dark:border-yellow-800">
-                <div className="flex flex-wrap gap-1">
-                  {scenario.winners.map((w) => (
-                    <span
-                      key={w}
-                      className="flex items-center gap-1 text-xs bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded cursor-default"
-                      onMouseEnter={() => setHoveredTeam(w)}
-                      onMouseLeave={() => setHoveredTeam(null)}
-                    >
-                      <TeamLogoFor team={w} teams={teams} size="xs" />
-                      {teams.teams[w]?.display_name ?? w}
-                    </span>
-                  ))}
+            {clinchRows.slice(0, 10).map((row, i) => {
+              const winners = row.gameOutcomes.filter((w): w is string => w !== null);
+              return (
+                <div key={i} className="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-950 rounded border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex flex-wrap gap-1">
+                    {winners.length === 0 ? (
+                      <span className="text-xs italic text-yellow-800 dark:text-yellow-400">Already locked in</span>
+                    ) : (
+                      winners.map((w, wi) => (
+                        <span
+                          key={`${w}-${wi}`}
+                          className="flex items-center gap-1 text-xs bg-white dark:bg-gray-800 px-1.5 py-0.5 rounded cursor-default"
+                          onMouseEnter={() => setHoveredTeam(w)}
+                          onMouseLeave={() => setHoveredTeam(null)}
+                        >
+                          <TeamLogoFor team={w} teams={teams} size="xs" />
+                          {teams.teams[w]?.display_name ?? w}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  <span className="text-xs font-mono text-yellow-800 dark:text-yellow-400 ml-2">
+                    {formatPercent(row.probability)}
+                  </span>
                 </div>
-                <span className="text-xs font-mono text-yellow-800 dark:text-yellow-400 ml-2">
-                  {formatPercent(scenario.probability)}
-                </span>
-              </div>
-            ))}
-            {teamImpact.clinching_scenarios.length > 10 && (
+              );
+            })}
+            {clinchRows.length > 10 && (
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                +{teamImpact.clinching_scenarios.length - 10} more clinching scenarios
+                +{clinchRows.length - 10} more clinching scenarios
               </p>
             )}
           </div>

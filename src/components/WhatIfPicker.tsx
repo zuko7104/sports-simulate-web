@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
-import { dateToWeekNumber } from '../utils/dateUtils';
+import { RankingBadge } from './RankingBadge';
+import { groupGamesByWeek } from '../utils/groupGamesByWeek';
 import type { SeasonTeams, ConferenceProbabilities, CCGMatchups } from '../types';
+import type { ResolvedRanking } from '../utils/rankings';
 import { teamPath } from '../utils/routes';
 
 interface GameInfo {
@@ -34,96 +36,7 @@ interface WhatIfPickerProps {
   gameInfos: GameInfo[];
   selectionProbability: number;
   week1Start?: string;
-}
-
-interface WeekGroup {
-  weekLabel: string;
-  dateGroups: DateGroup[];
-}
-
-interface DateGroup {
-  dateLabel: string;
-  games: GameInfo[];
-}
-
-function formatDateLabel(date: Date): string {
-  const options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
-}
-
-function getWeekNumber(date: Date): number {
-  // Get the week number (Sunday-Saturday weeks)
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-  return Math.ceil((days + startOfYear.getDay() + 1) / 7);
-}
-
-function groupGamesByWeek(gameInfos: GameInfo[], week1Start?: string): WeekGroup[] {
-  // First, sort all games by date, then by away team (team1) alphabetically
-  const sortedGames = [...gameInfos].sort((a, b) => {
-    // Sort by date first
-    const dateA = a.date ?? '9999-99-99';
-    const dateB = b.date ?? '9999-99-99';
-    if (dateA !== dateB) {
-      return dateA.localeCompare(dateB);
-    }
-    // Then by away team (team1) alphabetically
-    return a.teams[0].localeCompare(b.teams[0]);
-  });
-
-  // Group games by week, then by date within each week
-  const weekMap = new Map<number, Map<string, GameInfo[]>>();
-
-  for (const game of sortedGames) {
-    let weekNum: number;
-    let dateKey: string;
-
-    if (!game.date) {
-      weekNum = -1;
-      dateKey = 'TBD';
-    } else {
-      const date = new Date(game.date + 'T12:00:00');
-      weekNum = week1Start
-        ? dateToWeekNumber(game.date, week1Start)
-        : getWeekNumber(date);
-      dateKey = game.date;
-    }
-
-    if (!weekMap.has(weekNum)) {
-      weekMap.set(weekNum, new Map());
-    }
-    const dateMap = weekMap.get(weekNum)!;
-    if (!dateMap.has(dateKey)) {
-      dateMap.set(dateKey, []);
-    }
-    dateMap.get(dateKey)!.push(game);
-  }
-
-  // Sort weeks and build result
-  const sortedWeeks = Array.from(weekMap.keys()).sort((a, b) => a - b);
-
-  return sortedWeeks.map((weekNum) => {
-    const dateMap = weekMap.get(weekNum)!;
-    const sortedDates = Array.from(dateMap.keys()).sort();
-
-    const dateGroups: DateGroup[] = sortedDates.map((dateKey) => {
-      let dateLabel: string;
-      if (dateKey === 'TBD') {
-        dateLabel = 'TBD';
-      } else {
-        const date = new Date(dateKey + 'T12:00:00');
-        dateLabel = formatDateLabel(date);
-      }
-      return {
-        dateLabel,
-        games: dateMap.get(dateKey)!,
-      };
-    });
-
-    const weekLabel = weekNum === -1 ? 'TBD' : `Week ${weekNum}`;
-
-    return { weekLabel, dateGroups };
-  });
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
 export function WhatIfPicker({
@@ -141,6 +54,7 @@ export function WhatIfPicker({
   gameInfos,
   selectionProbability,
   week1Start,
+  rankings,
 }: WhatIfPickerProps) {
   const selectedCount = Object.keys(selectedWinners).length;
 
@@ -226,6 +140,7 @@ export function WhatIfPicker({
                                 <span className={selected === team1 ? 'font-semibold' : ''}>
                                   {team1Meta?.display_name ?? team1}
                                 </span>
+                                <RankingBadge team={team1} rankings={rankings} />
                               </div>
                               <span className={`text-xs font-mono ${team1Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {team1Pct}%
@@ -247,6 +162,7 @@ export function WhatIfPicker({
                                 <span className={selected === team2 ? 'font-semibold' : ''}>
                                   {team2Meta?.display_name ?? team2}
                                 </span>
+                                <RankingBadge team={team2} rankings={rankings} />
                               </div>
                               <span className={`text-xs font-mono ${team2Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                 {team2Pct}%
@@ -310,6 +226,7 @@ export function WhatIfPicker({
                         <Link to={teamPath(conference, teamName, sport, season)} className="font-medium flex-1 hover:underline">
                           {teamMeta?.display_name ?? teamName}
                         </Link>
+                        <RankingBadge team={teamName} rankings={rankings} />
                         <span className="font-mono text-sm w-16 text-right">{percentage}%</span>
                         <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded h-3 overflow-hidden">
                           <div
@@ -350,11 +267,13 @@ export function WhatIfPicker({
                           <td className="py-1.5 pr-1 w-6"><TeamLogoFor team={matchup.teams[0]} teams={teams} size="sm" /></td>
                           <td className="py-1.5 pr-2">
                             <Link to={teamPath(conference, matchup.teams[0], sport, season)} className="hover:underline">{teams.teams[matchup.teams[0]]?.display_name ?? matchup.teams[0]}</Link>
+                            <RankingBadge team={matchup.teams[0]} rankings={rankings} className="ml-1" />
                           </td>
                           <td className="py-1.5 px-2 text-gray-400 dark:text-gray-500 text-center">vs</td>
                           <td className="py-1.5 pr-1 w-6"><TeamLogoFor team={matchup.teams[1]} teams={teams} size="sm" /></td>
                           <td className="py-1.5 pr-2">
                             <Link to={teamPath(conference, matchup.teams[1], sport, season)} className="hover:underline">{teams.teams[matchup.teams[1]]?.display_name ?? matchup.teams[1]}</Link>
+                            <RankingBadge team={matchup.teams[1]} rankings={rankings} className="ml-1" />
                           </td>
                           <td className="py-1.5 font-mono text-right">
                             {(matchup.probability * 100).toFixed(1)}%

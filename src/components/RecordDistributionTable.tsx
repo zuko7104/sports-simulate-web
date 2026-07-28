@@ -5,6 +5,7 @@ import { TeamName } from './TeamName';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
+import type { ResolvedRanking } from '../utils/rankings';
 
 interface RecordDistributionTableProps {
   probabilities: ConferenceProbabilities;
@@ -14,6 +15,7 @@ interface RecordDistributionTableProps {
   sport?: string;
   season?: string;
   historicalDate?: string;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
 type RecordType = 'conference' | 'overall';
@@ -31,7 +33,7 @@ function probTextClass(prob: number, impossible: boolean): string {
   return 'text-gray-800 dark:text-gray-100';
 }
 
-export function RecordDistributionTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season, historicalDate }: RecordDistributionTableProps) {
+export function RecordDistributionTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season, historicalDate, rankings }: RecordDistributionTableProps) {
   const [recordType, setRecordType] = useState<RecordType>('conference');
   const conference = conferenceProp ?? probabilities.conference;
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
@@ -197,7 +199,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
                     className="flex items-center gap-1.5 min-w-0 hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     <TeamLogoFor team={teamName} teams={teams} size="xs" className="shrink-0" />
-                    <TeamName team={teamName} teams={teams} className="font-medium text-xs truncate min-w-0 hover:underline" />
+                    <TeamName team={teamName} teams={teams} rankings={rankings} className="font-medium text-xs truncate min-w-0 hover:underline" />
                     {currentRecord && (
                       <span className="sm:inline text-xs text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap">
                         ({currentRecord})

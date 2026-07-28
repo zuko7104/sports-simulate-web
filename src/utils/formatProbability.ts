@@ -8,7 +8,7 @@
  */
 export function formatProbability(prob: number): string {
   if (prob <= 0) return '-';
-  if (prob < 0.001) return '<\u00a00.1%'; // non-breaking space so this never wraps mid-string
+  if (prob < 0.001) return '<0.1%'; // non-breaking space so this never wraps mid-string
   if (prob >= 1) return '100%';
   if (prob >= 0.9995) return '99.9%';
   return `${(prob * 100).toFixed(1)}%`;

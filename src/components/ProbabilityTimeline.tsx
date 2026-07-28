@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react';
 import { TeamLogoFor } from './TeamLogo';
+import { RankingBadge } from './RankingBadge';
 import type { TimelineData, SeasonTeams } from '../types';
-import { dateToWeekLabel, type DatesConfig } from '../utils/dateUtils';
+import { dateToWeekLabel, regularSeasonCutoffDate, type DatesConfig } from '../utils/dateUtils';
+import type { ResolvedRanking } from '../utils/rankings';
 
 interface ProbabilityTimelineProps {
   timeline: TimelineData;
   teams: SeasonTeams;
   highlightTeam?: string;
   datesConfig?: DatesConfig | null;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
 const CHART_WIDTH = 800;
@@ -16,28 +19,52 @@ const MARGIN = { top: 20, right: 20, bottom: 40, left: 40 };
 const PLOT_WIDTH = CHART_WIDTH - MARGIN.left - MARGIN.right;
 const PLOT_HEIGHT = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
 
-export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfig }: ProbabilityTimelineProps) {
-  const dates = timeline.dates;
-  const teamNames = Object.keys(timeline.teams);
+// A larger, invisible copy of each visible stroke/point, purely to make the
+// hover hit-target bigger than what's actually drawn — the visible lines/dots
+// stay thin, but the mouse doesn't need pixel-perfect precision to hit them.
+const HIT_STROKE_WIDTH = 16;
+const HIT_POINT_RADIUS = 9;
+
+export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfig, rankings }: ProbabilityTimelineProps) {
+  // Exclude the postseason-inclusive final snapshot of a completed season
+  // (see regularSeasonCutoffDate) — it isn't a real week of the season, so
+  // plotting it as one would show a misleading trailing point/segment.
+  const cutoffDate = useMemo(
+    () => (datesConfig ? regularSeasonCutoffDate(datesConfig) : null),
+    [datesConfig],
+  );
+  const dates = useMemo(
+    () => (cutoffDate ? timeline.dates.filter((d) => d <= cutoffDate) : timeline.dates),
+    [timeline.dates, cutoffDate],
+  );
+  const plottedDateSet = useMemo(() => new Set(dates), [dates]);
+  const teamEntries = useMemo(() => {
+    const result: TimelineData['teams'] = {};
+    for (const [team, entries] of Object.entries(timeline.teams)) {
+      result[team] = entries.filter((e) => plottedDateSet.has(e.date));
+    }
+    return result;
+  }, [timeline.teams, plottedDateSet]);
+  const teamNames = Object.keys(teamEntries);
 
   // Sort teams by their latest CCG probability
   const sortedTeams = useMemo(() => {
     return [...teamNames].sort((a, b) => {
-      const aEntries = timeline.teams[a];
-      const bEntries = timeline.teams[b];
+      const aEntries = teamEntries[a];
+      const bEntries = teamEntries[b];
       const aLast = aEntries[aEntries.length - 1]?.ccg_probability ?? 0;
       const bLast = bEntries[bEntries.length - 1]?.ccg_probability ?? 0;
       return bLast - aLast;
     });
-  }, [teamNames, timeline.teams]);
+  }, [teamNames, teamEntries]);
 
   // Only show teams with meaningful probability at some point
   const visibleTeams = useMemo(() => {
     return sortedTeams.filter(team => {
-      const entries = timeline.teams[team];
+      const entries = teamEntries[team];
       return entries.some(e => e.ccg_probability > 0.01);
     });
-  }, [sortedTeams, timeline.teams]);
+  }, [sortedTeams, teamEntries]);
 
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
@@ -66,14 +93,14 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
   const teamPaths = useMemo(() => {
     const paths: Record<string, string> = {};
     for (const team of visibleTeams) {
-      const entries = timeline.teams[team];
+      const entries = teamEntries[team];
       const points = entries.map(e => `${xScale(e.date)},${yScale(e.ccg_probability)}`);
       if (points.length > 0) {
         paths[team] = `M ${points.join(' L ')}`;
       }
     }
     return paths;
-  }, [visibleTeams, timeline.teams, dates]);
+  }, [visibleTeams, teamEntries, dates]);
 
   // Y-axis grid lines
   const yTicks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
@@ -124,37 +151,58 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
             const isHighlighted = activeTeam === team;
             const isFaded = activeTeam !== null && !isHighlighted;
             return (
-              <path
-                key={team}
-                d={teamPaths[team]}
-                fill="none"
-                stroke={color}
-                strokeWidth={isHighlighted ? 3 : 1.5}
-                opacity={isFaded ? 0.15 : 1}
-                style={{ transition: 'opacity 0.15s, stroke-width 0.15s', cursor: 'pointer' }}
-                onMouseEnter={() => setHoveredTeam(team)}
-                onMouseLeave={() => setHoveredTeam(null)}
-                onClick={() => toggleSelectedTeam(team)}
-              />
+              <g key={team}>
+                {/* Invisible wide copy of the line purely to make it easy to
+                    hover — the visible stroke below stays thin. */}
+                <path
+                  d={teamPaths[team]}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={HIT_STROKE_WIDTH}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredTeam(team)}
+                  onMouseLeave={() => setHoveredTeam(null)}
+                  onClick={() => toggleSelectedTeam(team)}
+                />
+                <path
+                  d={teamPaths[team]}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={isHighlighted ? 3 : 1.5}
+                  opacity={isFaded ? 0.15 : 1}
+                  style={{ transition: 'opacity 0.15s, stroke-width 0.15s', pointerEvents: 'none' }}
+                />
+              </g>
             );
           })}
 
           {/* Data points for the active (hovered or selected) team */}
-          {activeTeam && timeline.teams[activeTeam]?.map(entry => (
-            <circle
-              key={entry.date}
-              cx={xScale(entry.date)}
-              cy={yScale(entry.ccg_probability)}
-              r={3}
-              fill={teams.teams[activeTeam]?.primary_color ?? '#888'}
-              onMouseEnter={() => setHoveredDate(entry.date)}
-              onMouseLeave={() => setHoveredDate(null)}
-            />
+          {activeTeam && teamEntries[activeTeam]?.map(entry => (
+            <g key={entry.date}>
+              {/* Invisible larger hit target so hovering a specific point
+                  doesn't require pixel-perfect precision on the small dot. */}
+              <circle
+                cx={xScale(entry.date)}
+                cy={yScale(entry.ccg_probability)}
+                r={HIT_POINT_RADIUS}
+                fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHoveredDate(entry.date)}
+                onMouseLeave={() => setHoveredDate(null)}
+              />
+              <circle
+                cx={xScale(entry.date)}
+                cy={yScale(entry.ccg_probability)}
+                r={hoveredDate === entry.date ? 5 : 3}
+                fill={teams.teams[activeTeam]?.primary_color ?? '#888'}
+                style={{ transition: 'r 0.1s', pointerEvents: 'none' }}
+              />
+            </g>
           ))}
 
           {/* Tooltip */}
           {activeTeam && hoveredDate && (() => {
-            const entry = timeline.teams[activeTeam]?.find(e => e.date === hoveredDate);
+            const entry = teamEntries[activeTeam]?.find(e => e.date === hoveredDate);
             if (!entry) return null;
             const x = xScale(entry.date);
             const y = yScale(entry.ccg_probability);
@@ -177,7 +225,7 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
       <div className="mt-4 flex flex-wrap gap-2">
         {visibleTeams.map(team => {
           const meta = teams.teams[team];
-          const latestProb = timeline.teams[team]?.[timeline.teams[team].length - 1]?.ccg_probability ?? 0;
+          const latestProb = teamEntries[team]?.[teamEntries[team].length - 1]?.ccg_probability ?? 0;
           return (
             <button
               key={team}
@@ -194,6 +242,7 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
               />
               <TeamLogoFor team={team} teams={teams} size="xs" />
               <span className="font-medium">{meta?.display_name ?? team}</span>
+              <RankingBadge team={team} rankings={rankings} />
               <span className="text-gray-500 dark:text-gray-400 font-mono">{(latestProb * 100).toFixed(0)}%</span>
             </button>
           );

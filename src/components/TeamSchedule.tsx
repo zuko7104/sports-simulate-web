@@ -3,6 +3,8 @@ import type { GameResult, SeasonTeams } from '../types';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
 import { teamPath } from '../utils/routes';
+import { type DatesConfig, dateToWeekNumber, formatCompactDate, regularSeasonCutoffDate } from '../utils/dateUtils';
+import type { ResolvedRanking } from '../utils/rankings';
 
 interface TeamScheduleProps {
   games: GameResult[];
@@ -11,17 +13,18 @@ interface TeamScheduleProps {
   season: string;
   conference?: string;
   historicalDate?: string;
+  datesConfig?: DatesConfig | null;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
-export function TeamSchedule({ games, teams, sport, season, conference, historicalDate }: TeamScheduleProps) {
+export function TeamSchedule({ games, teams, sport, season, conference, historicalDate, datesConfig, rankings }: TeamScheduleProps) {
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T12:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+  const week1Start = datesConfig?.week1_start;
+  const regularSeasonCutoff = datesConfig ? regularSeasonCutoffDate(datesConfig) : undefined;
+
+  const weekLabelFor = (dateStr: string) => {
+    if (!week1Start || !regularSeasonCutoff || dateStr > regularSeasonCutoff) return null;
+    return dateToWeekNumber(dateStr, week1Start);
   };
 
   return (
@@ -29,6 +32,9 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
       <table className="min-w-full">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
+            <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+              Week
+            </th>
             <th className="text-left py-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
               Date
             </th>
@@ -44,6 +50,7 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
           {games.map((game, idx) => {
             const opponentMeta = teams.teams[game.opponent];
             const isCompleted = game.is_complete;
+            const weekLabel = weekLabelFor(game.date);
 
             return (
               <tr
@@ -53,7 +60,10 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
                 }`}
               >
                 <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                  {formatDate(game.date)}
+                  {weekLabel ?? ''}
+                </td>
+                <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {formatCompactDate(game.date)}
                 </td>
                 <td className="py-2 px-2">
                   <div className="flex items-center gap-2">
@@ -65,7 +75,7 @@ export function TeamSchedule({ games, teams, sport, season, conference, historic
                       to={`${teamPath(opponentMeta?.conference ?? conference ?? 'B12', game.opponent, sport, season)}${dateSuffix}`}
                       className="text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                     >
-                      <TeamName team={game.opponent} teams={teams} />
+                      <TeamName team={game.opponent} teams={teams} rankings={rankings} />
                     </Link>
                     {game.neutral && (
                       <span className="text-xs text-gray-400 dark:text-gray-500">(N)</span>

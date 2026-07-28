@@ -1,12 +1,39 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { TeamLogoFor } from '../components/TeamLogo';
+import { TeamName } from '../components/TeamName';
+import { ConferenceLogo } from '../components/ConferenceLogo';
 import { ConferenceSelector } from '../components/ConferenceSelector';
+import { AdSlot } from '../components/AdSlot';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSubPath, teamPath } from '../utils/routes';
+import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSwitchPath, teamPath } from '../utils/routes';
+import type { TiebreakerScenario } from '../types';
 
-const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC'];
+const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC', 'AAC', 'MWC', 'CUSA', 'MAC', 'SBC'];
+
+// A matchup at/above this confidence is treated as fully decided - matches
+// the threshold used elsewhere for "locked" CCG outcomes (e.g. the
+// flowchart, Ways to Lock).
+const LOCKED_CONFIDENCE_THRESHOLD = 0.999;
+
+const MAX_SCENARIOS_BEFORE_COLLAPSE = 50;
+
+// Each conference's own tiebreaker procedure - keyed by conference code
+// (not display name) so it can be looked up directly from the current
+// conference. Conferences without an entry here simply don't get a "How
+// Tiebreakers Work" card.
+const TIEBREAKER_PROCEDURES: Record<string, string> = {
+  B12: 'Head-to-head record → Record against the highest-placed common opponent → Next-highest, etc. → Strength of schedule → Total wins',
+  SEC: 'Head-to-head → Common conference opponents → Combined record against next-highest teams → Strength of schedule → Scoring margin',
+  B10: 'Head-to-head → Common conference opponents → Record against highest-placed opponent → Next-highest, etc.',
+  ACC: 'Head-to-head → Common conference opponents → Record against next-best common opponent → Strength of schedule',
+  AAC: 'Head-to-head → CFP rank / computer rankings → Common conference opponents → Overall winning percentage',
+  MWC: 'Head-to-head → CFP rank / computer rankings → Overall winning percentage → Next-highest team → Common conference opponents',
+  CUSA: 'Head-to-head → CFP rank → Computer rankings composite → Academic Progress Rate',
+  MAC: 'Head-to-head → Common conference opponents → Next-highest opponent → Strength of schedule → Team Rating Score',
+  SBC: 'Divisional (East vs. West): each division champion is decided by head-to-head → next-highest team → non-divisional common opponents → strength of schedule, then the two champions meet in the CCG',
+};
 
 function formatPercent(value: number): string {
   if (value < 0.001) return '<0.1%';
@@ -25,6 +52,21 @@ function ProbabilityBar({ value }: { value: number }) {
   );
 }
 
+/** A scenario's CCG matchup is only "certain" when exactly one matchup was
+ * surfaced and it's at/above the locked threshold - anything else (multiple
+ * candidate matchups, or a single one below the threshold, or none at all)
+ * means the tiebreaker's outcome genuinely isn't 100% determined by the tie
+ * alone (e.g. it depends on point differentials or other games not yet
+ * played). The simulation already surfaces this: `ccg_matchups` is built
+ * from how the *actual simulated seasons* falling into this tie resolved,
+ * so a fragmented/uncertain tiebreaker naturally produces more than one
+ * entry (or a sub-100% top entry) instead of always collapsing to one.
+ */
+function isScenarioUncertain(scenario: TiebreakerScenario): boolean {
+  if (scenario.ccg_matchups.length !== 1) return true;
+  return scenario.ccg_matchups[0].probability < LOCKED_CONFIDENCE_THRESHOLD;
+}
+
 export function TiebreakersPage() {
   const {
     sport = DEFAULT_SPORT,
@@ -32,16 +74,20 @@ export function TiebreakersPage() {
     conference = 'B12',
   } = useParams<{ sport: string; year: string; conference: string }>();
   const navigate = useNavigate();
-  const { teams, tiebreakers, loading, error, loadConference } = useConferenceData();
+  const [searchParams] = useSearchParams();
+  const historicalDate = searchParams.get('date') ?? undefined;
+  const { teams, tiebreakers, rankings, loading, error, loadConference } = useConferenceData();
   const [filterTeam, setFilterTeam] = useState<string>('');
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    loadConference(sport, year, conference);
-  }, [conference, sport, year, loadConference]);
+    loadConference(sport, year, conference, historicalDate);
+  }, [conference, sport, year, historicalDate, loadConference]);
 
-  // Reset filter when conference changes
+  // Reset filter/expansion when conference changes
   useEffect(() => {
     setFilterTeam('');
+    setShowAll(false);
   }, [conference]);
 
   const conferences = teams?.conferences
@@ -62,6 +108,8 @@ export function TiebreakersPage() {
     }
     return true;
   }) ?? [];
+
+  const displayedScenarios = showAll ? filteredScenarios : filteredScenarios.slice(0, MAX_SCENARIOS_BEFORE_COLLAPSE);
 
   // All teams in tiebreaker scenarios for filter dropdown
   const tiebreakerTeams = new Set<string>();
@@ -84,7 +132,11 @@ export function TiebreakersPage() {
         <ConferenceSelector
           conferences={conferences}
           selected={conference}
-          onChange={(conf) => navigate(conferenceSubPath(conf, 'tiebreakers', sport, year))}
+          onChange={(conf) => {
+            const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
+            const hasSimulation = teams?.conferences[conf]?.has_simulation !== false;
+            navigate(`${conferenceSwitchPath(conf, 'tiebreakers', hasSimulation, sport, year)}${dateSuffix}`);
+          }}
           conferenceNames={teams?.conferences}
         />
       </div>
@@ -102,22 +154,19 @@ export function TiebreakersPage() {
         </div>
       )}
 
-      {!loading && !error && !tiebreakers && (
+      {!loading && !error && (!tiebreakers || tiebreakers.scenarios.length === 0) && (
         <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Tiebreaker Data</h3>
+          <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300 mb-2">No Tiebreaker Data</h3>
           <p className="text-yellow-700 dark:text-yellow-300">
-            Tiebreaker scenario data is not yet available for this conference.
+            {tiebreakers
+              ? 'No tiebreaker scenarios are available for this week — the standings may already be fully decided by record, or this matchup hasn\'t been computed yet.'
+              : 'Tiebreaker scenario data is not yet available for this conference and week.'}
           </p>
         </div>
       )}
 
       {!loading && !error && tiebreakers && tiebreakers.scenarios.length > 0 && (
         <>
-          {/* Info banner */}
-          <div className="mb-5 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800">
-            ⚠️ Some tiebreaker outcomes depend on factors like point differentials that cannot be predicted before games are played.
-          </div>
-
           {/* Filters */}
           <div className="mb-5 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex items-center gap-2">
@@ -136,13 +185,15 @@ export function TiebreakersPage() {
               </select>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {filteredScenarios.length} of {tiebreakers.scenarios.length} scenarios
-              {filteredScenarios.length > 50 && ' (showing top 50)'}
+              {showAll ? filteredScenarios.length : displayedScenarios.length} of {filteredScenarios.length} scenarios
             </p>
           </div>
 
+          <AdSlot slotId="tiebreakers-top" className="mb-6" />
+
           {/* Scenario table */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -150,21 +201,30 @@ export function TiebreakersPage() {
                     Scenario
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Likely CCG Matchup
+                    CCG Matchup
                   </th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                     Probability
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredScenarios.slice(0, 50).map((scenario, idx) => {
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {displayedScenarios.map((scenario, idx) => {
                   const lossGroups = Object.entries(scenario.teams_by_losses)
                     .filter(([, teams]) => teams.length > 0)
                     .sort(([a], [b]) => parseInt(a) - parseInt(b));
 
+                  const uncertain = isScenarioUncertain(scenario);
+
                   return (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <tr
+                      key={idx}
+                      className={`transition-colors ${
+                        uncertain
+                          ? 'bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 dark:hover:bg-amber-900/40'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
                       {/* Scenario: loss groups */}
                       <td className="px-4 py-3">
                         <div className="space-y-1.5">
@@ -183,11 +243,11 @@ export function TiebreakersPage() {
                                   {teamList.map(team => (
                                     <Link
                                       key={team}
-                                      to={teamPath(conference, team, sport, year)}
+                                      to={`${teamPath(conference, team, sport, year)}${historicalDate ? `?date=${historicalDate}` : ''}`}
                                       className="inline-flex items-center gap-1 text-sm px-2 py-0.5 rounded-md bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 hover:text-blue-700 transition-colors border border-gray-200 dark:border-gray-700"
                                     >
                                       <TeamLogoFor team={team} teams={teams} size="xs" />
-                                      <span>{teams?.teams[team]?.display_name ?? team}</span>
+                                      <TeamName team={team} teams={teams} rankings={rankings} />
                                     </Link>
                                   ))}
                                 </div>
@@ -199,22 +259,30 @@ export function TiebreakersPage() {
 
                       {/* CCG matchups */}
                       <td className="px-4 py-3">
+                        {uncertain && (
+                          <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-1.5">
+                            CCG participants not 100% certain
+                          </p>
+                        )}
                         {scenario.ccg_matchups.length > 0 ? (
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             {scenario.ccg_matchups.slice(0, 3).map((matchup, i) => (
-                              <div key={i} className="flex items-center gap-1.5 text-sm">
-                                <span className="inline-flex items-center gap-1">
-                                  <TeamLogoFor team={matchup.team_a} teams={teams} size="xs" />
-                                  <span className="font-medium">{teams?.teams[matchup.team_a]?.display_name ?? matchup.team_a}</span>
-                                </span>
-                                <span className="text-gray-400 dark:text-gray-500 text-xs">vs</span>
-                                <span className="inline-flex items-center gap-1">
-                                  <TeamLogoFor team={matchup.team_b} teams={teams} size="xs" />
-                                  <span className="font-medium">{teams?.teams[matchup.team_b]?.display_name ?? matchup.team_b}</span>
-                                </span>
-                                <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
-                                  {formatPercent(matchup.probability)}
-                                </span>
+                              <div key={i} className="flex items-center gap-2 text-sm">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center gap-1">
+                                    <TeamLogoFor team={matchup.team_a} teams={teams} size="xs" />
+                                    <TeamName team={matchup.team_a} teams={teams} rankings={rankings} className="font-medium" />
+                                  </span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <TeamLogoFor team={matchup.team_b} teams={teams} size="xs" />
+                                    <TeamName team={matchup.team_b} teams={teams} rankings={rankings} className="font-medium" />
+                                  </span>
+                                </div>
+                                {uncertain && (
+                                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                                    {formatPercent(matchup.probability)}
+                                  </span>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -228,63 +296,44 @@ export function TiebreakersPage() {
                         <span className="text-base font-bold font-mono text-gray-900 dark:text-gray-100">
                           {formatPercent(scenario.probability)}
                         </span>
-                        <ProbabilityBar value={scenario.probability / (filteredScenarios[0]?.probability || 1)} />
+                        <ProbabilityBar value={scenario.probability / (displayedScenarios[0]?.probability || 1)} />
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+            </div>
           </div>
 
-          {filteredScenarios.length > 50 && (
-            <p className="text-center text-gray-500 dark:text-gray-400 text-sm mt-3">
-              Showing top 50 of {filteredScenarios.length} scenarios
-            </p>
+          {!showAll && filteredScenarios.length > MAX_SCENARIOS_BEFORE_COLLAPSE && (
+            <div className="text-center mt-3">
+              <button
+                onClick={() => setShowAll(true)}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
+              >
+                Show all {filteredScenarios.length} scenarios
+              </button>
+            </div>
           )}
         </>
       )}
 
       {/* How tiebreakers work */}
-      <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-          How Tiebreakers Work
-        </h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">Big 12</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Head-to-head record → Record against the highest-placed
-              common opponent → Next-highest, etc. → Strength of schedule → Total wins
-            </p>
-          </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">SEC</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Head-to-head → Common conference opponents → Combined record
-              against next-highest teams → Strength of schedule → Scoring margin
-            </p>
-          </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">Big Ten</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Head-to-head → Common conference opponents → Record against
-              highest-placed opponent → Next-highest, etc.
-            </p>
-          </div>
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">ACC</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Head-to-head → Common conference opponents → Record against
-              next-best common opponent → Strength of schedule
-            </p>
-          </div>
+      {TIEBREAKER_PROCEDURES[conference] && (
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+            How <ConferenceLogo conference={conference} meta={teams?.conferences?.[conference]} size="sm" /> Tiebreakers Work
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {TIEBREAKER_PROCEDURES[conference]}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            Some tiebreaker steps involve factors like point differential that cannot
+            be predicted before games are played, leading to uncertain outcomes.
+          </p>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-          Some tiebreaker steps involve factors like point differential that cannot
-          be predicted before games are played, leading to uncertain outcomes.
-        </p>
-      </div>
+      )}
     </div>
   );
 }

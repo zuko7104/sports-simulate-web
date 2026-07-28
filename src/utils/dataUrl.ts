@@ -11,9 +11,6 @@
  * The R2_BASE_URL Vite env var is set at build time by sports-simulate-web's
  * GitHub Actions workflow. Falls back to same-origin /data/ for local dev.
  *
- * Set in sports-simulate-web/.github/workflows/pages.yml:
- *   env:
- *     VITE_R2_BASE_URL: https://pub-xxxx.r2.dev  # sports-simulate-data bucket
  */
 
 const R2_BASE =

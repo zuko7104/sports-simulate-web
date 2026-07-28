@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { EveryOutcome } from '../types';
 
-interface AggregatedProbabilities {
+export interface AggregatedProbabilities {
   ccg_probabilities: Record<string, number>;
   top_ccg_matchups: { teams: [string, string]; probability: number }[];
   matchingScenarios: number;
@@ -65,7 +65,7 @@ function calculateScenarioWeight(
  * Aggregates probabilities across all scenarios that match the selected winners.
  * Scenarios are weighted by their probability of occurring based on game win probabilities.
  */
-function aggregateProbabilities(
+export function aggregateProbabilities(
   everyOutcome: EveryOutcome,
   selectedWinners: Record<string, string>
 ): AggregatedProbabilities {

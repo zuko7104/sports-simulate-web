@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { AdSlot } from '../components/AdSlot';
 import { TeamProbabilityTable } from '../components/TeamProbabilityTable';
 import { CCGMatchupList } from '../components/CCGMatchupList';
 import { ConferenceSelector } from '../components/ConferenceSelector';
@@ -9,7 +10,8 @@ import { ConferenceLogo } from '../components/ConferenceLogo';
 import { CCGOddsByRecord } from '../components/CCGOddsByRecord';
 import { RecordDistributionTable } from '../components/RecordDistributionTable';
 import { WeekImpactTable } from '../components/WeekImpactTable';
-import { dateToWeekLabel } from '../utils/dateUtils';
+import { BasicConferenceStandings } from '../components/BasicConferenceStandings';
+import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath } from '../utils/routes';
 
 // Default conferences to show (will be replaced by data from index.json when available)
@@ -25,22 +27,25 @@ export function ConferenceDashboard() {
   const historicalDate = searchParams.get('date') ?? undefined;
   const navigate = useNavigate();
 
-  const { teams, schedules, probabilities, matchups, weekImpact, loading, error, currentDate, latestDate, datesConfig, loadConference } = useConferenceData();
+  const { teams, schedules, probabilities, matchups, everyOutcome, weekImpact, timeline, rankings, loading, error, currentDate, datesConfig, loadConference } = useConferenceData();
 
   useEffect(() => {
     loadConference(selectedSport, selectedSeason, selectedConference, historicalDate);
   }, [selectedConference, selectedSport, selectedSeason, historicalDate, loadConference]);
 
-  const conferences = teams?.conferences
-    ? Object.keys(teams.conferences)
-    : DEFAULT_CONFERENCES;
+  // The conference selector lists every conference/group - simulated (P4/G6)
+  // conferences plus basic (no-simulation) groups (FCS conferences, Pac-12,
+  // independents) - grouped into sections so it stays browsable.
+  const conferences = teams?.conferences ? Object.keys(teams.conferences) : DEFAULT_CONFERENCES;
 
   const conferenceDisplayName = teams?.conferences[selectedConference]?.display_name ?? selectedConference;
   const conferenceMeta = teams?.conferences[selectedConference];
+  const hasSimulation = conferenceMeta?.has_simulation ?? true;
   usePageTitle(conferenceDisplayName);
 
   const handleConferenceChange = (conf: string) => {
-    navigate(conferencePath(conf, selectedSport, selectedSeason));
+    const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
+    navigate(`${conferencePath(conf, selectedSport, selectedSeason)}${dateSuffix}`);
   };
 
   return (
@@ -49,10 +54,12 @@ export function ConferenceDashboard() {
         <ConferenceLogo conference={selectedConference} meta={conferenceMeta} size="lg" />
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {conferenceDisplayName} Championship Probabilities
+            {conferenceDisplayName} {hasSimulation ? 'Championship Probabilities' : 'Standings'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Simulated probabilities for conference championship game appearances
+            {hasSimulation
+              ? 'Simulated probabilities for conference championship game appearances'
+              : 'No championship simulation is run for this group'}
             {currentDate && <span className="ml-2 text-sm">• Data from {currentDate}</span>}
           </p>
         </div>
@@ -66,20 +73,6 @@ export function ConferenceDashboard() {
           conferenceNames={teams?.conferences}
         />
       </div>
-
-      {historicalDate && latestDate && historicalDate !== latestDate && (
-        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between">
-          <span className="text-amber-800 dark:text-amber-300 text-sm">
-            📅 Viewing historical data from <strong>{dateToWeekLabel(historicalDate, datesConfig?.week1_start, datesConfig?.dates)}</strong>
-          </span>
-          <Link
-            to={conferencePath(selectedConference, selectedSport, selectedSeason)}
-            className="text-sm text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline"
-          >
-            Back to latest
-          </Link>
-        </div>
-      )}
 
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -97,7 +90,19 @@ export function ConferenceDashboard() {
         </div>
       )}
 
-      {!loading && !error && probabilities && teams && matchups && schedules && (
+      {!loading && !error && teams && schedules && !hasSimulation && (
+        <BasicConferenceStandings
+          teams={teams}
+          schedules={schedules}
+          conference={selectedConference}
+          sport={selectedSport}
+          season={selectedSeason}
+          historicalDate={historicalDate}
+          rankings={rankings}
+        />
+      )}
+
+      {!loading && !error && hasSimulation && probabilities && teams && matchups && schedules && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TeamProbabilityTable
@@ -108,22 +113,34 @@ export function ConferenceDashboard() {
               sport={selectedSport}
               season={selectedSeason}
               historicalDate={historicalDate}
+              rankings={rankings}
             />
-            <CCGMatchupList matchups={matchups} teams={teams} conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} />
+            <CCGMatchupList matchups={matchups} teams={teams} conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} rankings={rankings} />
           </div>
 
-          {weekImpact && (
-            <div className="mt-6">
-              <WeekImpactTable weekImpact={weekImpact} teams={teams} showTeamSelector conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} />
+          <AdSlot slotId="dashboard-top" className="mt-6" />
+
+          {timeline && (
+            <div className="mt-6 card">
+              <h2 className="card-header">CCG Probability Over Time</h2>
+              <ProbabilityTimeline timeline={timeline} teams={teams} datesConfig={datesConfig} rankings={rankings} />
             </div>
           )}
 
+          {weekImpact && (
+            <div className="mt-6">
+              <WeekImpactTable weekImpact={weekImpact} teams={teams} showTeamSelector conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} everyOutcome={everyOutcome} rankings={rankings} />
+            </div>
+          )}
+
+          <AdSlot slotId="dashboard-mid" className="mt-6" />
+
           <div className="mt-6">
-            <CCGOddsByRecord probabilities={probabilities} teams={teams} conference={selectedConference} historicalDate={historicalDate} />
+            <CCGOddsByRecord probabilities={probabilities} teams={teams} conference={selectedConference} historicalDate={historicalDate} rankings={rankings} />
           </div>
 
           <div className="mt-6">
-            <RecordDistributionTable probabilities={probabilities} teams={teams} schedules={schedules} conference={selectedConference} historicalDate={historicalDate} />
+            <RecordDistributionTable probabilities={probabilities} teams={teams} schedules={schedules} conference={selectedConference} historicalDate={historicalDate} rankings={rankings} />
           </div>
         </>
       )}

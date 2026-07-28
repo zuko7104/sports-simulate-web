@@ -4,6 +4,7 @@ import { TeamName } from './TeamName';
 import type { CCGMatchups, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
+import type { ResolvedRanking } from '../utils/rankings';
 
 interface CCGMatchupListProps {
   matchups: CCGMatchups;
@@ -13,9 +14,10 @@ interface CCGMatchupListProps {
   season?: string;
   historicalDate?: string;
   limit?: number;
+  rankings?: Record<string, ResolvedRanking> | null;
 }
 
-export function CCGMatchupList({ matchups, teams, conference, sport, season, historicalDate, limit = 15 }: CCGMatchupListProps) {
+export function CCGMatchupList({ matchups, teams, conference, sport, season, historicalDate, limit = 15, rankings }: CCGMatchupListProps) {
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const topMatchups = matchups.matchups.slice(0, limit);
   const maxProb = topMatchups.length > 0 ? topMatchups[0].probability : 1;
@@ -39,9 +41,12 @@ export function CCGMatchupList({ matchups, teams, conference, sport, season, his
               key={`${matchup.team_a}-${matchup.team_b}`}
               className="relative rounded-lg overflow-hidden"
             >
-              {/* Bar background */}
+              {/* Bar background — noticeably more opaque in dark mode, where a
+                  subtle tint reads as barely-there against the dark card
+                  background (unlike light mode, where the same opacity
+                  already stands out against a white card). */}
               <div
-                className="absolute inset-y-0 left-0 rounded-lg opacity-15"
+                className="absolute inset-y-0 left-0 rounded-lg opacity-15 dark:opacity-45"
                 style={{
                   width: `${barWidth}%`,
                   background: `linear-gradient(90deg, ${colorA}, ${colorB})`,
@@ -61,7 +66,7 @@ export function CCGMatchupList({ matchups, teams, conference, sport, season, his
                     className="flex items-center gap-1.5 sm:gap-2 min-w-0 hover:underline"
                   >
                     <TeamLogoFor team={matchup.team_a} teams={teams} size="sm" />
-                    <TeamName team={matchup.team_a} teams={teams} className="font-medium text-sm truncate" />
+                    <TeamName team={matchup.team_a} teams={teams} rankings={rankings} className="font-medium text-sm truncate" />
                   </Link>
                 </div>
 
@@ -72,7 +77,7 @@ export function CCGMatchupList({ matchups, teams, conference, sport, season, his
                     to={`${teamPath(conference ?? matchups.conference, matchup.team_b, sport, season)}${dateSuffix}`}
                     className="flex items-center gap-1.5 sm:gap-2 min-w-0 hover:underline justify-end"
                   >
-                    <TeamName team={matchup.team_b} teams={teams} className="font-medium text-sm truncate text-right" />
+                    <TeamName team={matchup.team_b} teams={teams} rankings={rankings} className="font-medium text-sm truncate text-right" />
                     <TeamLogoFor team={matchup.team_b} teams={teams} size="sm" />
                   </Link>
                 </div>
