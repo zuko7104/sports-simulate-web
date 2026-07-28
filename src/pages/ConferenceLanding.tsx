@@ -93,7 +93,13 @@ export function ConferenceLanding() {
                   className="flex flex-col items-center gap-3 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow text-white text-center"
                   style={{ backgroundColor: conf.color }}
                 >
-                  <ConferenceLogo conference={conf.id} meta={conf} size="xl" forceVariant="dark" />
+                  <ConferenceLogo
+                    conference={conf.id}
+                    meta={conf}
+                    size="xl"
+                    forceVariant="dark"
+                    className="bg-white/20 rounded-xl p-3"
+                  />
                   <h2 className="text-2xl font-bold">{conf.display_name}</h2>
                   <p className="mt-2 text-sm opacity-80">View standings & probabilities</p>
                 </Link>

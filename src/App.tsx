@@ -33,7 +33,14 @@ function Navigation() {
   // Parse /:sport/:year/:conference/... directly from the path so this works
   // regardless of which nested route rendered (Navigation lives outside the
   // inner <Routes>, so useParams here won't see route-specific params).
-  const [, sport, year, maybeConference] = location.pathname.split('/');
+  // location.pathname keeps segments percent-encoded (e.g. "FBS%20Independents"),
+  // but conference codes are matched/used decoded everywhere else (teams.json
+  // keys, conferencePath's own encodeURIComponent call) - so this must decode
+  // before comparing, or any conference code containing a space/special
+  // character never matches and silently hides the whole nav (tabs, week
+  // selector, mobile menu).
+  const [, sport, year, rawMaybeConference] = location.pathname.split('/');
+  const maybeConference = rawMaybeConference ? decodeURIComponent(rawMaybeConference) : rawMaybeConference;
   const knownConferences = useKnownConferences(sport, year);
   const activeConference =
     sport === DEFAULT_SPORT && year && maybeConference && knownConferences?.has(maybeConference)
