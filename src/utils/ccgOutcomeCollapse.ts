@@ -250,7 +250,7 @@ export function collapseClinchOutcomes(
 ): ClinchRow[] {
   const gameProbabilities = everyOutcome.game_probabilities ?? {};
   const allScenarios = Object.values(everyOutcome.scenarios);
-  const rows: ClinchRow[] = [];
+  const rawRows: ClinchRow[] = [];
 
   // Deliberately NOT built the same way as collapseOutcomes/collapseScenarioGroup:
   // grouping "every scenario where `team` clinches" into one bucket (rather
@@ -288,7 +288,7 @@ export function collapseClinchOutcomes(
         totalProb += p;
         confidenceSum += p * (s.ccg_probabilities[team] ?? 0);
       }
-      rows.push({
+      rawRows.push({
         gameOutcomes: [...selections],
         probability: totalProb,
         confidence: totalProb > 0 ? confidenceSum / totalProb : 0,
@@ -314,7 +314,31 @@ export function collapseClinchOutcomes(
   }
 
   recurse(new Array(orderedGames.length).fill(null), allScenarios, 0);
-  return rows.sort((a, b) => b.probability - a.probability);
+
+  // The decision tree above stops branching as soon as a group is
+  // homogeneous, but it walks games in schedule order — so a game that's
+  // actually irrelevant (doesn't affect whether `team` clinches) still gets
+  // branched on if it's scheduled before the game(s) that do matter, leaving
+  // sibling rows that differ only in that irrelevant game. Run the same
+  // pairwise-flip merge `collapseOutcomes` uses to null those back out; cheap
+  // here since rawRows is already small (the blowup that ruled out this
+  // approach for the full 2^N scenario set doesn't apply to its output).
+  const asScenarios = new Map<string, FullScenario>();
+  for (const row of rawRows) {
+    const binary: BinaryOutcome = orderedGames.map((game, i) => {
+      const winner = row.gameOutcomes[i];
+      return winner === null ? null : winner === game[0] ? 0 : 1;
+    });
+    asScenarios.set(outcomeKey(binary), {
+      outcomeKey: outcomeKey(binary),
+      probability: row.probability,
+      confidence: row.confidence,
+    });
+  }
+
+  return collapseScenarioGroup(asScenarios, orderedGames)
+    .map((row) => ({ gameOutcomes: row.gameOutcomes, probability: row.probability, confidence: row.confidence }))
+    .sort((a, b) => b.probability - a.probability);
 }
 
 /**
