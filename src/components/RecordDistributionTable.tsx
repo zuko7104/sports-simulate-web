@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
+import { ConferenceLogo } from './ConferenceLogo';
+import { DownloadPngButton } from './DownloadPngButton';
+import { CardExportFooter } from './CardExportFooter';
+import { useExportableCard } from '../hooks/useExportableCard';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -36,6 +40,7 @@ function probTextClass(prob: number, impossible: boolean): string {
 export function RecordDistributionTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season, historicalDate, rankings }: RecordDistributionTableProps) {
   const [recordType, setRecordType] = useState<RecordType>('conference');
   const conference = conferenceProp ?? probabilities.conference;
+  const conferenceMeta = teams.conferences[conference];
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
   const conferenceTeamSet = useMemo(() => new Set(conferenceTeams), [conferenceTeams]);
@@ -131,18 +136,27 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
     return { teamData: data, allRecords: sorted };
   }, [conferenceTeams, probabilities, recordType]);
 
+  const slug = (conferenceMeta?.abbreviation ?? conference).toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, brandRef, downloading, handleDownload } = useExportableCard(`${slug}-record-distribution.png`);
+
   if (teamData.length === 0) return null;
 
   return (
-    <div className="card">
+    <div className="card" ref={contentRef}>
+      <div ref={hideOnExport} className="flex justify-end mb-1">
+        <DownloadPngButton downloading={downloading} onClick={handleDownload} />
+      </div>
       <div className="flex flex-wrap items-start sm:items-center justify-between gap-2 mb-4">
         <div>
-          <h2 className="card-header mb-0">Final Record Distribution</h2>
+          <h2 className="card-header mb-0 flex items-center gap-2">
+            <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" />
+            Final Record Distribution
+          </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Probability of each team finishing with a given {recordType} record
           </p>
         </div>
-        <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
+        <div ref={hideOnExport} className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
           <button
             onClick={() => setRecordType('conference')}
             className={`px-3 py-1 text-sm font-medium ${
@@ -231,6 +245,7 @@ export function RecordDistributionTable({ probabilities, teams, schedules, confe
           </tbody>
         </table>
       </div>
+      <CardExportFooter ref={brandRef} dataDate={probabilities.simulation_date} />
     </div>
   );
 }

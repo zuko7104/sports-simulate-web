@@ -10,6 +10,10 @@ interface ProbabilityTimelineProps {
   teams: SeasonTeams;
   highlightTeam?: string;
   datesConfig?: DatesConfig | null;
+  /** The date currently being viewed (e.g. from a historical `?date=`
+   * selection) - when provided, snapshots after this date are excluded so
+   * browsing an earlier week doesn't reveal later weeks' probabilities. */
+  currentDate?: string | null;
   rankings?: Record<string, ResolvedRanking> | null;
 }
 
@@ -25,7 +29,7 @@ const PLOT_HEIGHT = CHART_HEIGHT - MARGIN.top - MARGIN.bottom;
 const HIT_STROKE_WIDTH = 16;
 const HIT_POINT_RADIUS = 9;
 
-export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfig, rankings }: ProbabilityTimelineProps) {
+export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfig, currentDate, rankings }: ProbabilityTimelineProps) {
   // Exclude the postseason-inclusive final snapshot of a completed season
   // (see regularSeasonCutoffDate) — it isn't a real week of the season, so
   // plotting it as one would show a misleading trailing point/segment.
@@ -33,10 +37,13 @@ export function ProbabilityTimeline({ timeline, teams, highlightTeam, datesConfi
     () => (datesConfig ? regularSeasonCutoffDate(datesConfig) : null),
     [datesConfig],
   );
-  const dates = useMemo(
-    () => (cutoffDate ? timeline.dates.filter((d) => d <= cutoffDate) : timeline.dates),
-    [timeline.dates, cutoffDate],
-  );
+  const dates = useMemo(() => {
+    let result = cutoffDate ? timeline.dates.filter((d) => d <= cutoffDate) : timeline.dates;
+    // Only show weeks up to and including the one currently being viewed -
+    // otherwise browsing an earlier snapshot would spoil later weeks' odds.
+    if (currentDate) result = result.filter((d) => d <= currentDate);
+    return result;
+  }, [timeline.dates, cutoffDate, currentDate]);
   const plottedDateSet = useMemo(() => new Set(dates), [dates]);
   const teamEntries = useMemo(() => {
     const result: TimelineData['teams'] = {};

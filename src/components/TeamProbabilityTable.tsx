@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { formatProbability } from '../utils/formatProbability';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
+import { ConferenceLogo } from './ConferenceLogo';
+import { DownloadPngButton } from './DownloadPngButton';
+import { CardExportFooter } from './CardExportFooter';
+import { useExportableCard } from '../hooks/useExportableCard';
 import type { ConferenceProbabilities, SeasonTeams, Schedules } from '../types';
 import { isConferenceGame } from '../utils/conferenceGame';
 import { teamPath } from '../utils/routes';
@@ -29,6 +33,7 @@ interface TeamProbabilityTableProps {
 export function TeamProbabilityTable({ probabilities, teams, schedules, conference: conferenceProp, sport, season = '2025', historicalDate, rankings }: TeamProbabilityTableProps) {
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conference = conferenceProp ?? probabilities.conference;
+  const conferenceMeta = teams.conferences[conference];
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
   const conferenceTeamSet = useMemo(() => new Set(conferenceTeams), [conferenceTeams]);
 
@@ -136,9 +141,18 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
   const ariaSort = (key: SortKey): 'ascending' | 'descending' | 'none' =>
     sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
 
+  const slug = (conferenceMeta?.abbreviation ?? conference).toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, brandRef, downloading, handleDownload } = useExportableCard(`${slug}-standings.png`);
+
   return (
-    <div className="card">
-      <h2 className="card-header">Conference Standings</h2>
+    <div className="card" ref={contentRef}>
+      <div ref={hideOnExport} className="flex justify-end mb-1">
+        <DownloadPngButton downloading={downloading} onClick={handleDownload} />
+      </div>
+      <h2 className="card-header flex items-center gap-2">
+        <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" />
+        Conference Standings
+      </h2>
       <div className="overflow-x-auto">
         <table className="w-full table-fixed text-xs sm:text-sm">
           <colgroup>
@@ -246,10 +260,11 @@ export function TeamProbabilityTable({ probabilities, teams, schedules, conferen
           </tbody>
         </table>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">
-        Based on {probabilities.iterations.toLocaleString()} simulations •
-        Data from {probabilities.simulation_date}
-      </p>
+      <CardExportFooter
+        ref={brandRef}
+        dataDate={probabilities.simulation_date}
+        note={`Based on ${probabilities.iterations.toLocaleString()} simulations`}
+      />
     </div>
   );
 }

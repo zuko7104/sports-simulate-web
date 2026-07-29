@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
 import { RankingBadge } from './RankingBadge';
+import { ConferenceLogo } from './ConferenceLogo';
+import { DownloadPngButton } from './DownloadPngButton';
+import { CardExportFooter } from './CardExportFooter';
+import { useExportableCard } from '../hooks/useExportableCard';
 import type { WeekImpact, SeasonTeams, EveryOutcome } from '../types';
 import { teamPath } from '../utils/routes';
 import { gameSortKey } from '../utils/dateUtils';
@@ -20,6 +24,8 @@ interface WeekImpactTableProps {
   historicalDate?: string;
   /** Powers "Ways to Clinch CCG Spot This Week" — omit to hide that section. */
   everyOutcome?: EveryOutcome | null;
+  /** Shown in the "Data from {date}" export footer — only rendered when showTeamSelector is true. */
+  dataDate?: string | null;
   rankings?: Record<string, ResolvedRanking> | null;
 }
 
@@ -40,7 +46,7 @@ function impactColor(value: number): string {
   return 'text-gray-500 dark:text-gray-400';
 }
 
-export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelector = false, conference, sport, season, historicalDate, everyOutcome, rankings }: WeekImpactTableProps) {
+export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelector = false, conference, sport, season, historicalDate, everyOutcome, dataDate, rankings }: WeekImpactTableProps) {
   const teamNames = Object.keys(weekImpact.teams).sort(
     (a, b) => (weekImpact.teams[b].current_ccg_probability) - (weekImpact.teams[a].current_ccg_probability)
   );
@@ -48,6 +54,9 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
   const [selectorTeam, setSelectorTeam] = useState<string>(selectedTeam ?? teamNames[0] ?? '');
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const activeTeam = selectedTeam ?? selectorTeam;
+
+  const resolvedConference = conference ?? teams.teams[activeTeam]?.conference;
+  const conferenceMeta = resolvedConference ? teams.conferences[resolvedConference] : undefined;
 
   const orderedGames = useMemo(() => (everyOutcome ? orderGames(everyOutcome) : []), [everyOutcome]);
 
@@ -69,6 +78,10 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
   }, [everyOutcome, orderedGames, activeTeam]);
 
   const teamImpact = weekImpact.teams[activeTeam];
+
+  const slug = (conferenceMeta?.abbreviation ?? resolvedConference ?? 'conf').toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, brandRef, downloading, handleDownload } = useExportableCard(`${slug}-${activeTeam}-week-impact.png`);
+
   if (!teamImpact) return null;
 
   const sortedGameImpacts = (() => {
@@ -90,8 +103,8 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
     <div>
       {showTeamSelector && (
         <>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            This Week's Impact on CCG Odds
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            This Week's Impact on <ConferenceLogo conference={resolvedConference ?? ''} meta={conferenceMeta} size="sm" /> CCG Odds
           </h3>
           <div className="flex flex-wrap gap-2 mb-4">
             {teamNames.map((team) => {
@@ -256,8 +269,9 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
       {/* Clinching scenarios */}
       {hasClinching && (
         <div className="mt-4">
-          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
-            Ways to Clinch CCG Spot This Week
+          <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-1.5 flex-wrap">
+            Ways for <TeamLogoFor team={activeTeam} teams={teams} size="xs" /> to Clinch{' '}
+            <ConferenceLogo conference={resolvedConference ?? ''} meta={conferenceMeta} size="xs" /> CCG Spot This Week
           </h4>
           <div className="space-y-2">
             {clinchRows.slice(0, 10).map((row, i) => {
@@ -295,12 +309,16 @@ export function WeekImpactTable({ weekImpact, teams, selectedTeam, showTeamSelec
           </div>
         </div>
       )}
+      {showTeamSelector && <CardExportFooter ref={brandRef} dataDate={dataDate} />}
     </div>
   );
 
   if (showTeamSelector) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6" ref={contentRef}>
+        <div ref={hideOnExport} className="flex justify-end mb-1">
+          <DownloadPngButton downloading={downloading} onClick={handleDownload} />
+        </div>
         {content}
       </div>
     );

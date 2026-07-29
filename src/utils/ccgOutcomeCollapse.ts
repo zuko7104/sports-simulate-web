@@ -315,30 +315,95 @@ export function collapseClinchOutcomes(
 
   recurse(new Array(orderedGames.length).fill(null), allScenarios, 0);
 
-  // The decision tree above stops branching as soon as a group is
-  // homogeneous, but it walks games in schedule order — so a game that's
-  // actually irrelevant (doesn't affect whether `team` clinches) still gets
-  // branched on if it's scheduled before the game(s) that do matter, leaving
-  // sibling rows that differ only in that irrelevant game. Run the same
-  // pairwise-flip merge `collapseOutcomes` uses to null those back out; cheap
-  // here since rawRows is already small (the blowup that ruled out this
-  // approach for the full 2^N scenario set doesn't apply to its output).
-  const asScenarios = new Map<string, FullScenario>();
+  // The decision tree above walks games in a single fixed schedule order, so
+  // it can only discover that a game is irrelevant *after* committing to an
+  // outcome for every game before it in that order. That misses cases like:
+  // team clinches if A-vs-B is won by A, OR if C-vs-D is won by C (regardless
+  // of A-vs-B) — the recursion fixes A-vs-B first, so it only ever checks
+  // "does C win" *within* the B-branch, producing a row like "B and C win"
+  // instead of noticing "C wins" alone (independent of A-vs-B) already
+  // suffices. Fix this by greedily generalizing each row: try wildcarding
+  // each of its fixed games and keep the wildcard whenever every scenario
+  // consistent with the (now looser) row still clinches for `team`. This is
+  // cheap because it re-checks against the already-materialized
+  // `allScenarios` (bounded by the same 2^N the recursion above already
+  // walks) a bounded number of times (rows × games), rather than re-running
+  // the combinatorial pairwise-collapse that caused the earlier blowup.
+  const reducedByKey = new Map<string, (string | null)[]>();
   for (const row of rawRows) {
-    const binary: BinaryOutcome = orderedGames.map((game, i) => {
-      const winner = row.gameOutcomes[i];
-      return winner === null ? null : winner === game[0] ? 0 : 1;
-    });
-    asScenarios.set(outcomeKey(binary), {
-      outcomeKey: outcomeKey(binary),
-      probability: row.probability,
-      confidence: row.confidence,
+    const reduced = reduceClinchPattern(row.gameOutcomes, allScenarios, orderedGames, team);
+    reducedByKey.set(reduced.map((v) => v ?? 'n').join(','), reduced);
+  }
+
+  const recomputedRows: ClinchRow[] = [];
+  for (const pattern of reducedByKey.values()) {
+    let totalProb = 0;
+    let confidenceSum = 0;
+    for (const s of allScenarios) {
+      if (!scenarioMatchesPattern(s, pattern, orderedGames)) continue;
+      const p = scenarioProbability(s.game_outcomes, orderedGames, gameProbabilities);
+      totalProb += p;
+      confidenceSum += p * (s.ccg_probabilities[team] ?? 0);
+    }
+    recomputedRows.push({
+      gameOutcomes: pattern,
+      probability: totalProb,
+      confidence: totalProb > 0 ? confidenceSum / totalProb : 0,
     });
   }
 
-  return collapseScenarioGroup(asScenarios, orderedGames)
-    .map((row) => ({ gameOutcomes: row.gameOutcomes, probability: row.probability, confidence: row.confidence }))
-    .sort((a, b) => b.probability - a.probability);
+  // Drop any row whose covered scenarios are a strict subset of another
+  // row's — fully redundant once the wider row is shown.
+  const maximalRows = recomputedRows.filter(
+    (row, idx) => !recomputedRows.some((other, otherIdx) => otherIdx !== idx && isSubsumedBy(row.gameOutcomes, other.gameOutcomes))
+  );
+
+  return maximalRows.sort((a, b) => b.probability - a.probability);
+}
+
+function scenarioMatchesPattern(
+  scenario: WhatIfScenario,
+  pattern: (string | null)[],
+  orderedGames: [string, string][],
+): boolean {
+  for (let i = 0; i < pattern.length; i++) {
+    const fixed = pattern[i];
+    if (fixed === null) continue;
+    if (scenario.game_outcomes[gameKeyFor(orderedGames[i])] !== fixed) return false;
+  }
+  return true;
+}
+
+/** True when every game `other` fixes is fixed the same way in `pattern` —
+ * i.e. `pattern`'s covered scenarios are a subset of `other`'s. */
+function isSubsumedBy(pattern: (string | null)[], other: (string | null)[]): boolean {
+  return other.every((value, i) => value === null || pattern[i] === value);
+}
+
+function reduceClinchPattern(
+  pattern: (string | null)[],
+  allScenarios: WhatIfScenario[],
+  orderedGames: [string, string][],
+  team: string,
+): (string | null)[] {
+  const reduced = [...pattern];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = 0; i < reduced.length; i++) {
+      if (reduced[i] === null) continue;
+      const candidate = [...reduced];
+      candidate[i] = null;
+      const stillClinches = allScenarios.every(
+        (s) => !scenarioMatchesPattern(s, candidate, orderedGames) || (s.ccg_probabilities[team] ?? 0) >= CLINCH_CONFIDENCE_THRESHOLD
+      );
+      if (stillClinches) {
+        reduced[i] = null;
+        changed = true;
+      }
+    }
+  }
+  return reduced;
 }
 
 /**

@@ -219,6 +219,10 @@ function downloadBlob(blob: Blob, filename: string): void {
  * `modern-screenshot`'s `domToBlob` rather than `domToPng` specifically so
  * the download goes through `downloadBlob`'s `blob:` URL instead of a
  * `data:` URL - see `downloadBlob` for why that matters on iOS.
+ *
+ * `filename` is prefixed with the brand name here (rather than at each call
+ * site) so every exported PNG is named consistently without every caller
+ * having to remember to do it themselves.
  */
 export async function downloadElementAsPng(
   content: HTMLElement,
@@ -227,7 +231,7 @@ export async function downloadElementAsPng(
 ): Promise<void> {
   const { domToBlob } = await import('modern-screenshot');
   const blob = await domToBlob(content, { backgroundColor: options.backgroundColor, scale: options.scale ?? 2 });
-  downloadBlob(blob, filename);
+  downloadBlob(blob, `sportssimulate-${filename}`);
 }
 
 /**

@@ -2,6 +2,10 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
+import { ConferenceLogo } from './ConferenceLogo';
+import { DownloadPngButton } from './DownloadPngButton';
+import { CardExportFooter } from './CardExportFooter';
+import { useExportableCard } from '../hooks/useExportableCard';
 import type { ConferenceProbabilities, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -31,6 +35,7 @@ function probTextClass(prob: number): string {
 
 export function CCGOddsByRecord({ probabilities, teams, conference: conferenceProp, sport, season, historicalDate, rankings }: CCGOddsByRecordProps) {
   const conference = conferenceProp ?? probabilities.conference;
+  const conferenceMeta = teams.conferences[conference];
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
 
@@ -69,11 +74,20 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
     return { teamData: data, allRecords: nonEmpty };
   }, [conferenceTeams, probabilities]);
 
+  const slug = (conferenceMeta?.abbreviation ?? conference).toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, brandRef, downloading, handleDownload } = useExportableCard(`${slug}-ccg-odds-by-record.png`);
+
   if (teamData.length === 0 || allRecords.length === 0) return null;
 
   return (
-    <div className="card">
-      <h2 className="card-header">CCG Odds by Conference Record</h2>
+    <div className="card" ref={contentRef}>
+      <div ref={hideOnExport} className="flex justify-end mb-1">
+        <DownloadPngButton downloading={downloading} onClick={handleDownload} />
+      </div>
+      <h2 className="card-header flex items-center gap-2">
+        <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" />
+        CCG Odds by Conference Record
+      </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
         Probability of making the conference championship game given a final conference record
       </p>
@@ -129,6 +143,7 @@ export function CCGOddsByRecord({ probabilities, teams, conference: conferencePr
           </tbody>
         </table>
       </div>
+      <CardExportFooter ref={brandRef} dataDate={probabilities.simulation_date} />
     </div>
   );
 }

@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
+import { ConferenceLogo } from './ConferenceLogo';
+import { DownloadPngButton } from './DownloadPngButton';
+import { CardExportFooter } from './CardExportFooter';
+import { useExportableCard } from '../hooks/useExportableCard';
 import type { CCGMatchups, SeasonTeams } from '../types';
 import { formatProbability } from '../utils/formatProbability';
 import { teamPath } from '../utils/routes';
@@ -14,17 +18,28 @@ interface CCGMatchupListProps {
   season?: string;
   historicalDate?: string;
   limit?: number;
+  dataDate?: string | null;
   rankings?: Record<string, ResolvedRanking> | null;
 }
 
-export function CCGMatchupList({ matchups, teams, conference, sport, season, historicalDate, limit = 15, rankings }: CCGMatchupListProps) {
+export function CCGMatchupList({ matchups, teams, conference: conferenceProp, sport, season, historicalDate, limit = 15, dataDate, rankings }: CCGMatchupListProps) {
+  const conference = conferenceProp ?? matchups.conference;
+  const conferenceMeta = teams.conferences[conference];
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const topMatchups = matchups.matchups.slice(0, limit);
   const maxProb = topMatchups.length > 0 ? topMatchups[0].probability : 1;
 
+  const slug = (conferenceMeta?.abbreviation ?? conference).toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, brandRef, downloading, handleDownload } = useExportableCard(`${slug}-ccg-matchups.png`);
+
   return (
-    <div className="card">
-      <h2 className="card-header">Most Likely CCG Matchups</h2>
+    <div className="card" ref={contentRef}>
+      <div ref={hideOnExport} className="flex justify-end mb-1">
+        <DownloadPngButton downloading={downloading} onClick={handleDownload} />
+      </div>
+      <h2 className="card-header flex items-center gap-2">
+        Most Likely <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> CCG Matchups
+      </h2>
       <div className="space-y-1.5">
         {topMatchups.map((matchup, idx) => {
           const teamA = teams.teams[matchup.team_a];
@@ -62,7 +77,7 @@ export function CCGMatchupList({ matchups, teams, conference, sport, season, his
 
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                   <Link
-                    to={`${teamPath(conference ?? matchups.conference, matchup.team_a, sport, season)}${dateSuffix}`}
+                    to={`${teamPath(conference, matchup.team_a, sport, season)}${dateSuffix}`}
                     className="flex items-center gap-1.5 sm:gap-2 min-w-0 hover:underline"
                   >
                     <TeamLogoFor team={matchup.team_a} teams={teams} size="sm" />
@@ -74,7 +89,7 @@ export function CCGMatchupList({ matchups, teams, conference, sport, season, his
 
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 justify-end">
                   <Link
-                    to={`${teamPath(conference ?? matchups.conference, matchup.team_b, sport, season)}${dateSuffix}`}
+                    to={`${teamPath(conference, matchup.team_b, sport, season)}${dateSuffix}`}
                     className="flex items-center gap-1.5 sm:gap-2 min-w-0 hover:underline justify-end"
                   >
                     <TeamName team={matchup.team_b} teams={teams} rankings={rankings} className="font-medium text-sm truncate text-right" />
@@ -86,6 +101,7 @@ export function CCGMatchupList({ matchups, teams, conference, sport, season, his
           );
         })}
       </div>
+      <CardExportFooter ref={brandRef} dataDate={dataDate} />
     </div>
   );
 }

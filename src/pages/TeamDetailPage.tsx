@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AdSlot } from '../components/AdSlot';
 import { TeamLogoFor } from '../components/TeamLogo';
+import { ConferenceLogo } from '../components/ConferenceLogo';
+import { DownloadPngButton } from '../components/DownloadPngButton';
+import { CardExportFooter } from '../components/CardExportFooter';
 import { TeamSchedule } from '../components/TeamSchedule';
 import { RecordProbabilities } from '../components/RecordProbabilities';
 import { LossScenarios } from '../components/LossScenarios';
 import { WeekImpactTable } from '../components/WeekImpactTable';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
 import { RankingBadge } from '../components/RankingBadge';
+import { useExportableCard } from '../hooks/useExportableCard';
 import { isConferenceGame } from '../utils/conferenceGame';
-import { type DatesConfig } from '../utils/dateUtils';
+import { type DatesConfig, snapshotWeekNumber } from '../utils/dateUtils';
 import { dataUrl } from '../utils/dataUrl';
 import { expandTeamAliases } from '../utils/teamAliases';
 import { resolveRankings, type ResolvedRanking } from '../utils/rankings';
@@ -231,6 +235,25 @@ export function TeamDetailPage() {
 
   usePageTitle(teams?.teams[teamName]?.display_name ?? (teamName || null));
 
+  // Every exportable card on this page centers on `teamName`, so a single
+  // team-based slug names all of them - unlike the conference pages, there's
+  // no per-card conference/team variation to account for.
+  const teamSlug = teamName.toLowerCase().replace(/\s+/g, '-');
+  const scheduleExport = useExportableCard(`${teamSlug}-schedule.png`);
+  const recordProbsExport = useExportableCard(`${teamSlug}-record-probabilities.png`);
+  const ccgOpponentsExport = useExportableCard(`${teamSlug}-ccg-opponents.png`);
+  const weekImpactExport = useExportableCard(`${teamSlug}-week-impact.png`);
+  const lossScenariosExport = useExportableCard(`${teamSlug}-loss-scenarios.png`);
+  const timelineExport = useExportableCard(`${teamSlug}-ccg-probability-over-time.png`);
+
+  // The timeline chart has nothing meaningful to show in week 1 (only a
+  // single preseason snapshot exists), so it's hidden entirely until later -
+  // mirrors the same rule on the Conference Overview page.
+  const currentWeekNum = useMemo(() => {
+    if (!currentDate || !datesConfig?.week1_start) return null;
+    return snapshotWeekNumber(currentDate, datesConfig.week1_start);
+  }, [currentDate, datesConfig]);
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -358,8 +381,12 @@ export function TeamDetailPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
-      <nav className="text-sm mb-6">
-        <Link to={`${conferencePath(conference ?? urlConference ?? 'B12', sport, season)}${dateSuffix}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+      <nav className="text-sm mb-6 flex items-center">
+        <Link
+          to={`${conferencePath(conference ?? urlConference ?? 'B12', sport, season)}${dateSuffix}`}
+          className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          <ConferenceLogo conference={conference ?? urlConference ?? 'B12'} meta={conferenceMeta} size="xs" />
           {conferenceMeta?.abbreviation ?? urlConference ?? 'Conference'}
         </Link>
         <span className="mx-2 text-gray-400 dark:text-gray-600">/</span>
@@ -446,8 +473,14 @@ export function TeamDetailPage() {
 
       <div className={`grid gap-8 ${teamProbs ? 'lg:grid-cols-2' : ''}`}>
         {/* Schedule */}
-        <div className="card">
-          <h2 className="card-header">Schedule & Results</h2>
+        <div className="card" ref={scheduleExport.contentRef}>
+          <div ref={scheduleExport.hideOnExport} className="flex justify-end mb-1">
+            <DownloadPngButton downloading={scheduleExport.downloading} onClick={scheduleExport.handleDownload} />
+          </div>
+          <h2 className="card-header flex items-center gap-2">
+            <TeamLogoFor team={teamName} teams={teams} size="sm" />
+            Schedule & Results
+          </h2>
           <TeamSchedule
             games={teamSchedule.games}
             teams={teams}
@@ -458,12 +491,19 @@ export function TeamDetailPage() {
             datesConfig={datesConfig}
             rankings={rankings}
           />
+          <CardExportFooter ref={scheduleExport.brandRef} dataDate={currentDate} />
         </div>
 
         {/* Record Probabilities */}
         {teamProbs && (
-          <div className="card">
-            <h2 className="card-header">Record Probabilities</h2>
+          <div className="card" ref={recordProbsExport.contentRef}>
+            <div ref={recordProbsExport.hideOnExport} className="flex justify-end mb-1">
+              <DownloadPngButton downloading={recordProbsExport.downloading} onClick={recordProbsExport.handleDownload} />
+            </div>
+            <h2 className="card-header flex items-center gap-2">
+              <TeamLogoFor team={teamName} teams={teams} size="sm" />
+              Record Probabilities
+            </h2>
             <RecordProbabilities
               probabilities={teamProbs}
               teamColor={teamMeta.primary_color}
@@ -475,7 +515,9 @@ export function TeamDetailPage() {
               conferenceTeams={conferenceTeams}
               teamName={teamName}
               season={season}
+              hideOnExport={recordProbsExport.hideOnExport}
             />
+            <CardExportFooter ref={recordProbsExport.brandRef} dataDate={currentDate} />
           </div>
         )}
       </div>
@@ -484,9 +526,12 @@ export function TeamDetailPage() {
 
       {/* CCG Matchup Probabilities */}
       {teamMatchups && teamMatchups.length > 0 && (
-        <div className="card mt-8">
-          <h2 className="card-header">
-            Most Likely CCG Opponents
+        <div className="card mt-8" ref={ccgOpponentsExport.contentRef}>
+          <div ref={ccgOpponentsExport.hideOnExport} className="flex justify-end mb-1">
+            <DownloadPngButton downloading={ccgOpponentsExport.downloading} onClick={ccgOpponentsExport.handleDownload} />
+          </div>
+          <h2 className="card-header flex items-center gap-2">
+            Most Likely <TeamLogoFor team={teamName} teams={teams} size="sm" /> CCG Opponents
           </h2>
           <p className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
             if <TeamLogoFor team={teamName} teams={teams} size="xs" /> makes the CCG
@@ -500,7 +545,7 @@ export function TeamDetailPage() {
                   key={opponent}
                   className="flex items-center gap-2"
                 >
-                  <div className="w-32 shrink-0 flex items-center gap-1.5 justify-end">
+                  <div className="w-28 sm:w-48 lg:w-64 shrink-0 flex items-center gap-1.5 justify-end">
                     <Link
                       to={`${teamPath(oppMeta?.conference ?? conference ?? urlConference ?? 'B12', opponent, sport, season)}${dateSuffix}`}
                       className="text-sm hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate"
@@ -529,13 +574,20 @@ export function TeamDetailPage() {
               );
             })}
           </div>
+          <CardExportFooter ref={ccgOpponentsExport.brandRef} dataDate={currentDate} />
         </div>
       )}
 
       {/* Week Impact for this team */}
       {weekImpactData && weekImpactData.teams[teamName] && (
-        <div className="card mt-8">
-          <h2 className="card-header">This Week's Impact</h2>
+        <div className="card mt-8" ref={weekImpactExport.contentRef}>
+          <div ref={weekImpactExport.hideOnExport} className="flex justify-end mb-1">
+            <DownloadPngButton downloading={weekImpactExport.downloading} onClick={weekImpactExport.handleDownload} />
+          </div>
+          <h2 className="card-header flex items-center gap-2">
+            <TeamLogoFor team={teamName} teams={teams} size="sm" />
+            This Week's Impact
+          </h2>
           <WeekImpactTable
             weekImpact={weekImpactData}
             teams={teams}
@@ -547,13 +599,20 @@ export function TeamDetailPage() {
             everyOutcome={everyOutcome}
             rankings={rankings}
           />
+          <CardExportFooter ref={weekImpactExport.brandRef} dataDate={currentDate} />
         </div>
       )}
 
       {/* Loss Scenarios */}
       {lossScenarioData?.teams[teamName]?.scenarios && lossScenarioData.teams[teamName].scenarios.length > 0 && (
-        <div className="card mt-8">
-          <h2 className="card-header">Loss Combination Scenarios</h2>
+        <div className="card mt-8" ref={lossScenariosExport.contentRef}>
+          <div ref={lossScenariosExport.hideOnExport} className="flex justify-end mb-1">
+            <DownloadPngButton downloading={lossScenariosExport.downloading} onClick={lossScenariosExport.handleDownload} />
+          </div>
+          <h2 className="card-header flex items-center gap-2">
+            <TeamLogoFor team={teamName} teams={teams} size="sm" />
+            Loss Combination Scenarios
+          </h2>
           <LossScenarios
             teamName={teamName}
             scenarios={lossScenarioData.teams[teamName].scenarios}
@@ -562,22 +621,31 @@ export function TeamDetailPage() {
             conference={conference ?? urlConference}
             currentLossOpponents={teamSchedule.games.filter(g => g.is_complete && !g.won).map(g => g.opponent)}
           />
+          <CardExportFooter ref={lossScenariosExport.brandRef} dataDate={currentDate} />
         </div>
       )}
 
       <AdSlot slotId="team-mid" className="mt-8" />
 
       {/* Probability over time */}
-      {timeline && (
-        <div className="card mt-8">
-          <h2 className="card-header">CCG Probability Over Time</h2>
+      {timeline && (currentWeekNum === null || currentWeekNum > 1) && (
+        <div className="card mt-8" ref={timelineExport.contentRef}>
+          <div ref={timelineExport.hideOnExport} className="flex justify-end mb-1">
+            <DownloadPngButton downloading={timelineExport.downloading} onClick={timelineExport.handleDownload} />
+          </div>
+          <h2 className="card-header flex items-center gap-2">
+            <TeamLogoFor team={teamName} teams={teams} size="sm" />
+            CCG Probability Over Time
+          </h2>
           <ProbabilityTimeline
             timeline={timeline}
             teams={teams}
             highlightTeam={teamName}
             datesConfig={datesConfig}
+            currentDate={currentDate}
             rankings={rankings}
           />
+          <CardExportFooter ref={timelineExport.brandRef} dataDate={currentDate} />
         </div>
       )}
 

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { RankingBadge } from './RankingBadge';
+import { ConferenceLogo } from './ConferenceLogo';
 import { groupGamesByWeek } from '../utils/groupGamesByWeek';
 import type { SeasonTeams, ConferenceProbabilities, CCGMatchups } from '../types';
 import type { ResolvedRanking } from '../utils/rankings';
@@ -37,6 +38,9 @@ interface WhatIfPickerProps {
   selectionProbability: number;
   week1Start?: string;
   rankings?: Record<string, ResolvedRanking> | null;
+  /** Attach to elements that should disappear for the duration of a
+   * whole-page PNG export - see useExportableCard's hideOnExport. */
+  hideOnExport?: (el: HTMLElement | null) => void;
 }
 
 export function WhatIfPicker({
@@ -55,7 +59,9 @@ export function WhatIfPicker({
   selectionProbability,
   week1Start,
   rankings,
+  hideOnExport,
 }: WhatIfPickerProps) {
+  const conferenceMeta = teams.conferences[conference];
   const selectedCount = Object.keys(selectedWinners).length;
 
   // When no games are selected, use the dashboard's pre-computed data
@@ -85,8 +91,10 @@ export function WhatIfPicker({
       {/* Left Column: Game Picker */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="card-header mb-0 border-0 pb-0">Pick Game Winners</h2>
-          <div className="flex gap-2">
+          <h2 className="card-header mb-0 border-0 pb-0 flex items-center gap-2">
+            Pick <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> Game Winners
+          </h2>
+          <div ref={hideOnExport} className="flex gap-2">
             <button
               onClick={onFillFavorites}
               className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
@@ -196,8 +204,8 @@ export function WhatIfPicker({
       <div className="space-y-6">
         {/* CCG Probabilities */}
         <div className="card">
-          <h2 className="card-header">
-            CCG Probabilities
+          <h2 className="card-header flex items-center gap-2">
+            <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> CCG Probabilities
             {selectedCount > 0 && (
               <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
                 (with selected outcomes)
@@ -249,8 +257,8 @@ export function WhatIfPicker({
 
         {/* Top CCG Matchups */}
         <div className="card">
-          <h2 className="card-header">
-            Top CCG Matchups
+          <h2 className="card-header flex items-center gap-2">
+            Top <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> CCG Matchups
           </h2>
 
           {effectiveProbabilities && effectiveProbabilities.top_ccg_matchups.length > 0 ? (

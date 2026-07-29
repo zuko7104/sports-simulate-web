@@ -15,6 +15,9 @@ interface RecordProbabilitiesProps {
   conferenceTeams: string[];
   teamName: string;
   season: string;
+  /** Attach to elements (e.g. the view toggle) that should disappear for the
+   * duration of a PNG export - see useExportableCard's hideOnExport. */
+  hideOnExport?: (el: HTMLElement | null) => void;
 }
 
 export function RecordProbabilities({
@@ -28,6 +31,7 @@ export function RecordProbabilities({
   conferenceTeams,
   teamName,
   season,
+  hideOnExport,
 }: RecordProbabilitiesProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('conference');
 
@@ -81,7 +85,7 @@ export function RecordProbabilities({
   return (
     <div className="space-y-4">
       {/* View Toggle */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg w-fit">
+      <div ref={hideOnExport} className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg w-fit">
         <button
           onClick={() => setViewMode('conference')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${

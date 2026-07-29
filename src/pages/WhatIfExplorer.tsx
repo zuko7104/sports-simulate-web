@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { useWhatIf } from '../hooks/useWhatIf';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useExportableCard } from '../hooks/useExportableCard';
 import { AdSlot } from '../components/AdSlot';
 import { WhatIfPicker } from '../components/WhatIfPicker';
 import { FullSeasonPicker } from '../components/FullSeasonPicker';
 import { ConferenceSelector } from '../components/ConferenceSelector';
+import { ConferenceLogo } from '../components/ConferenceLogo';
+import { DownloadPngButton } from '../components/DownloadPngButton';
 import { getRemainingConferenceGames, buildConferenceState, fillWithFavorites, selectionProbability as calcSelectionProb } from '../utils/seasonBuilder';
 import { resolveChampionship } from '../utils/tiebreakers';
 import { dateToWeekNumber } from '../utils/dateUtils';
 import { DEFAULT_SPORT, CURRENT_SEASON, conferenceSwitchPath } from '../utils/routes';
+import { encodeGameWinnersState, decodeGameWinnersState, type GameSlot } from '../utils/urlState';
 
 const DEFAULT_CONFERENCES = ['B12', 'SEC', 'B10', 'ACC', 'AAC', 'MWC', 'CUSA', 'MAC', 'SBC'];
 
@@ -23,11 +27,12 @@ export function WhatIfExplorer() {
     conference: selectedConference = 'B12',
   } = useParams<{ sport: string; year: string; conference: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const historicalDate = searchParams.get('date') ?? undefined;
-  const [mode, setMode] = useState<Mode>('next-weeks');
+  const [mode, setMode] = useState<Mode>(() => (searchParams.get('mode') === 'full' ? 'full-season' : 'next-weeks'));
   const [selectedWinners, setSelectedWinners] = useState<Record<string, string>>({});
   const [fullSeasonWinners, setFullSeasonWinners] = useState<Record<string, string>>({});
+  const hydratedFromUrlRef = useRef(false);
 
   const { teams, schedules, everyOutcome, rankings, loading, error, currentDate, datesConfig, loadConference, probabilities: dashboardProbabilities, matchups: dashboardMatchups } = useConferenceData();
   const { setWinner, clearSelections, probabilities, gameInfos, selectionProbability } = useWhatIf(
@@ -53,14 +58,21 @@ export function WhatIfExplorer() {
     loadConference(selectedSport, selectedSeason, selectedConference, historicalDate);
     setSelectedWinners({});
     setFullSeasonWinners({});
+    hydratedFromUrlRef.current = false;
   }, [selectedConference, selectedSport, selectedSeason, historicalDate, loadConference]);
 
   const conferences = teams?.conferences
     ? Object.keys(teams.conferences)
     : DEFAULT_CONFERENCES;
 
-  const conferenceDisplayName = teams?.conferences[selectedConference]?.display_name ?? selectedConference;
+  const conferenceMeta = teams?.conferences[selectedConference];
+  const conferenceDisplayName = conferenceMeta?.display_name ?? selectedConference;
   usePageTitle(`${conferenceDisplayName} What-If`);
+
+  const slug = (conferenceMeta?.abbreviation ?? selectedConference).toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, downloading, handleDownload } = useExportableCard(
+    `${slug}-what-if-${mode === 'full-season' ? 'full-season' : 'next-weeks'}.png`
+  );
 
   const handleConferenceChange = (conf: string) => {
     const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
@@ -76,6 +88,48 @@ export function WhatIfExplorer() {
 
   const allGamesSelected = remainingGames.length > 0 &&
     remainingGames.every((g) => fullSeasonWinners[g.gameKey] != null);
+
+  const nextWeeksGameSlots = useMemo<GameSlot[]>(
+    () => gameInfos.map((g) => ({ gameKey: g.gameKey, teamA: g.teams[0], teamB: g.teams[1] })),
+    [gameInfos]
+  );
+  const fullSeasonGameSlots = useMemo<GameSlot[]>(
+    () => remainingGames.map((g) => ({ gameKey: g.gameKey, teamA: g.awayTeam, teamB: g.homeTeam })),
+    [remainingGames]
+  );
+
+  // Hydrate selections from the `state` query param once the active mode's
+  // game list has loaded (only ever runs once per conference/season load).
+  useEffect(() => {
+    if (hydratedFromUrlRef.current) return;
+    const stateParam = searchParams.get('state');
+    if (!stateParam) {
+      hydratedFromUrlRef.current = true;
+      return;
+    }
+    if (mode === 'next-weeks') {
+      if (nextWeeksGameSlots.length === 0) return;
+      setSelectedWinners(decodeGameWinnersState(nextWeeksGameSlots, stateParam));
+    } else {
+      if (fullSeasonGameSlots.length === 0) return;
+      setFullSeasonWinners(decodeGameWinnersState(fullSeasonGameSlots, stateParam));
+    }
+    hydratedFromUrlRef.current = true;
+  }, [mode, nextWeeksGameSlots, fullSeasonGameSlots, searchParams]);
+
+  // Keep the URL in sync with the current mode + selections.
+  useEffect(() => {
+    if (!hydratedFromUrlRef.current) return;
+    const games = mode === 'next-weeks' ? nextWeeksGameSlots : fullSeasonGameSlots;
+    const winners = mode === 'next-weeks' ? selectedWinners : fullSeasonWinners;
+    const encoded = encodeGameWinnersState(games, winners);
+
+    const next = new URLSearchParams();
+    if (historicalDate) next.set('date', historicalDate);
+    if (mode === 'full-season') next.set('mode', 'full');
+    if (encoded) next.set('state', encoded);
+    setSearchParams(next, { replace: true });
+  }, [mode, selectedWinners, fullSeasonWinners, nextWeeksGameSlots, fullSeasonGameSlots, historicalDate, setSearchParams]);
 
   const conferenceState = useMemo(() => {
     if (!allGamesSelected || !schedules || !teams) return null;
@@ -121,10 +175,10 @@ export function WhatIfExplorer() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8" ref={contentRef}>
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          What-If Explorer
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2 flex-wrap">
+          SportsSimulate.com <ConferenceLogo conference={selectedConference} meta={conferenceMeta} size="md" /> What-If Explorer
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Choose winners for upcoming games to see how it affects championship probabilities
@@ -132,7 +186,7 @@ export function WhatIfExplorer() {
         </p>
       </header>
 
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div ref={hideOnExport} className="mb-6 flex flex-wrap items-center gap-4">
         <ConferenceSelector
           conferences={conferences}
           selected={selectedConference}
@@ -163,9 +217,13 @@ export function WhatIfExplorer() {
             Full Season
           </button>
         </div>
+
+        <DownloadPngButton downloading={downloading} onClick={handleDownload} />
       </div>
 
-      <AdSlot slotId="whatif-top" className="mb-6" />
+      <div ref={hideOnExport}>
+        <AdSlot slotId="whatif-top" className="mb-6" />
+      </div>
 
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -204,6 +262,7 @@ export function WhatIfExplorer() {
               selectionProbability={selectionProbability}
               week1Start={datesConfig?.week1_start}
               rankings={rankings}
+              hideOnExport={hideOnExport}
             />
           )}
         </>
@@ -226,6 +285,7 @@ export function WhatIfExplorer() {
           allGamesSelected={allGamesSelected}
           week1Start={datesConfig?.week1_start}
           rankings={rankings}
+          hideOnExport={hideOnExport}
         />
       )}
     </div>

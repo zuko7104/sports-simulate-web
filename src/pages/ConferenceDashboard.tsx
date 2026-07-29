@@ -1,17 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useConferenceData } from '../hooks/useConferenceData';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { useExportableCard } from '../hooks/useExportableCard';
 import { AdSlot } from '../components/AdSlot';
 import { TeamProbabilityTable } from '../components/TeamProbabilityTable';
 import { CCGMatchupList } from '../components/CCGMatchupList';
 import { ConferenceSelector } from '../components/ConferenceSelector';
 import { ConferenceLogo } from '../components/ConferenceLogo';
+import { DownloadPngButton } from '../components/DownloadPngButton';
+import { CardExportFooter } from '../components/CardExportFooter';
 import { CCGOddsByRecord } from '../components/CCGOddsByRecord';
 import { RecordDistributionTable } from '../components/RecordDistributionTable';
 import { WeekImpactTable } from '../components/WeekImpactTable';
 import { BasicConferenceStandings } from '../components/BasicConferenceStandings';
 import { ProbabilityTimeline } from '../components/ProbabilityTimeline';
+import { snapshotWeekNumber } from '../utils/dateUtils';
 import { DEFAULT_SPORT, CURRENT_SEASON, conferencePath } from '../utils/routes';
 
 // Default conferences to show (will be replaced by data from index.json when available)
@@ -47,6 +51,23 @@ export function ConferenceDashboard() {
     const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
     navigate(`${conferencePath(conf, selectedSport, selectedSeason)}${dateSuffix}`);
   };
+
+  // The timeline chart has nothing meaningful to show in week 1 (only a
+  // single preseason snapshot exists), so it's hidden entirely until later.
+  const currentWeekNum = useMemo(() => {
+    if (!currentDate || !datesConfig?.week1_start) return null;
+    return snapshotWeekNumber(currentDate, datesConfig.week1_start);
+  }, [currentDate, datesConfig]);
+  const showTimeline = !!timeline && (currentWeekNum === null || currentWeekNum > 1);
+
+  const slug = (conferenceMeta?.abbreviation ?? selectedConference).toLowerCase().replace(/\s+/g, '-');
+  const {
+    contentRef: timelineContentRef,
+    hideOnExport: timelineHideOnExport,
+    brandRef: timelineBrandRef,
+    downloading: timelineDownloading,
+    handleDownload: timelineHandleDownload,
+  } = useExportableCard(`${slug}-ccg-probability-over-time.png`);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -98,6 +119,7 @@ export function ConferenceDashboard() {
           sport={selectedSport}
           season={selectedSeason}
           historicalDate={historicalDate}
+          dataDate={currentDate}
           rankings={rankings}
         />
       )}
@@ -115,21 +137,28 @@ export function ConferenceDashboard() {
               historicalDate={historicalDate}
               rankings={rankings}
             />
-            <CCGMatchupList matchups={matchups} teams={teams} conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} rankings={rankings} />
+            <CCGMatchupList matchups={matchups} teams={teams} conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} dataDate={currentDate} rankings={rankings} />
           </div>
 
           <AdSlot slotId="dashboard-top" className="mt-6" />
 
-          {timeline && (
-            <div className="mt-6 card">
-              <h2 className="card-header">CCG Probability Over Time</h2>
-              <ProbabilityTimeline timeline={timeline} teams={teams} datesConfig={datesConfig} rankings={rankings} />
+          {showTimeline && (
+            <div className="mt-6 card" ref={timelineContentRef}>
+              <div ref={timelineHideOnExport} className="flex justify-end mb-1">
+                <DownloadPngButton downloading={timelineDownloading} onClick={timelineHandleDownload} />
+              </div>
+              <h2 className="card-header flex items-center gap-2">
+                <ConferenceLogo conference={selectedConference} meta={conferenceMeta} size="sm" />
+                CCG Probability Over Time
+              </h2>
+              <ProbabilityTimeline timeline={timeline} teams={teams} datesConfig={datesConfig} currentDate={currentDate} rankings={rankings} />
+              <CardExportFooter ref={timelineBrandRef} dataDate={currentDate} />
             </div>
           )}
 
           {weekImpact && (
             <div className="mt-6">
-              <WeekImpactTable weekImpact={weekImpact} teams={teams} showTeamSelector conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} everyOutcome={everyOutcome} rankings={rankings} />
+              <WeekImpactTable weekImpact={weekImpact} teams={teams} showTeamSelector conference={selectedConference} sport={selectedSport} season={selectedSeason} historicalDate={historicalDate} everyOutcome={everyOutcome} dataDate={currentDate} rankings={rankings} />
             </div>
           )}
 

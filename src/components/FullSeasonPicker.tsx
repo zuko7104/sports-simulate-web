@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { RankingBadge } from './RankingBadge';
+import { ConferenceLogo } from './ConferenceLogo';
 import { dateToWeekNumber } from '../utils/dateUtils';
 import type { SeasonTeams, TiebreakerResult, ConferenceState } from '../types';
 import type { RemainingGame } from '../utils/seasonBuilder';
@@ -24,6 +25,9 @@ interface FullSeasonPickerProps {
   allGamesSelected: boolean;
   week1Start?: string;
   rankings?: Record<string, ResolvedRanking> | null;
+  /** Attach to elements that should disappear for the duration of a
+   * whole-page PNG export - see useExportableCard's hideOnExport. */
+  hideOnExport?: (el: HTMLElement | null) => void;
 }
 
 interface WeekGroup {
@@ -89,22 +93,150 @@ export function FullSeasonPicker({
   allGamesSelected,
   week1Start,
   rankings,
+  hideOnExport,
 }: FullSeasonPickerProps) {
+  const conferenceMeta = teams.conferences[conference];
   const selectedCount = Object.keys(selectedWinners).length;
   const totalGames = remainingGames.length;
   const weekGroups = useMemo(() => groupGamesByWeek(remainingGames, week1Start), [remainingGames, week1Start]);
+  // Chunk consecutive weeks into rows of three — current week, next week,
+  // the week after — so each row is its own independent CSS grid: this
+  // keeps chronologically-consecutive weeks running horizontally across
+  // the three desktop columns, while still sharing row height within that
+  // row, so a week with fewer games/dates just leaves blank space below it
+  // instead of throwing off the next row's vertical alignment.
+  const WEEK_COLUMN_COUNT = 3;
+  const weekRows = useMemo(() => {
+    const rows: WeekGroup[][] = [];
+    for (let i = 0; i < weekGroups.length; i += WEEK_COLUMN_COUNT) {
+      rows.push(weekGroups.slice(i, i + WEEK_COLUMN_COUNT));
+    }
+    return rows;
+  }, [weekGroups]);
   const showFloatingCCG = allGamesSelected && tiebreakerResult?.ccgParticipants != null;
+
+  // Which of the Standings/Seeding cards is taller decides which one sits
+  // top-right (next to the always-top-left CCG card) vs. bottom-left below
+  // it — measured from the actual rendered heights since that can't be
+  // known ahead of time (it depends on tiebreaker complexity/tie counts).
+  const standingsRef = useRef<HTMLDivElement>(null);
+  const seedingRef = useRef<HTMLDivElement>(null);
+  const [standingsTaller, setStandingsTaller] = useState(true);
+
+  useLayoutEffect(() => {
+    const standingsEl = standingsRef.current;
+    const seedingEl = seedingRef.current;
+    if (!standingsEl || !seedingEl) return;
+    const measure = () => setStandingsTaller(standingsEl.offsetHeight >= seedingEl.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(standingsEl);
+    observer.observe(seedingEl);
+    return () => observer.disconnect();
+  }, [tiebreakerResult]);
+
+  // Row 1's height must be pinned to the CCG card's own natural height as an
+  // exact pixel value. A `min-content` (or `auto`) row track is still
+  // eligible to absorb extra space needed by a row-spanning item per the
+  // grid track-sizing algorithm — only a fixed length is excluded from that
+  // redistribution — so without this, the Standings/Seeding card spanning
+  // both rows inflates row 1 and pushes the bottom-left card down, leaving
+  // it looking vertically centered in the leftover gap.
+  const ccgRef = useRef<HTMLDivElement>(null);
+  const [ccgHeight, setCcgHeight] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const ccgEl = ccgRef.current;
+    if (!ccgEl) return;
+    const measure = () => setCcgHeight(ccgEl.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(ccgEl);
+    return () => observer.disconnect();
+  }, [tiebreakerResult]);
+
+  const renderWeek = (week: WeekGroup) => (
+    <div key={week.weekLabel}>
+      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">
+        {week.weekLabel}
+      </h3>
+      <div className="space-y-3">
+        {week.dateGroups.map((dateGroup) => (
+          <div key={dateGroup.dateLabel}>
+            <h4 className="text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">
+              {dateGroup.dateLabel}
+            </h4>
+            <div className="space-y-2">
+              {dateGroup.games.map((game) => {
+                const selected = selectedWinners[game.gameKey];
+                const team1Meta = teams.teams[game.awayTeam];
+                const team2Meta = teams.teams[game.homeTeam];
+                const team1Pct = Math.round(game.awayWinProb * 100);
+                const team2Pct = 100 - team1Pct;
+
+                return (
+                  <div key={game.gameKey} className="flex items-center gap-2">
+                    <button
+                      onClick={() => onSelectWinner(game.gameKey, game.awayTeam)}
+                      className={`flex-1 flex items-center justify-between gap-2 py-2 px-3 rounded-lg border-2 transition-all ${
+                        selected === game.awayTeam
+                          ? 'border-green-500 bg-green-50 dark:bg-green-500/10'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <TeamLogoFor team={game.awayTeam} teams={teams} size="sm" />
+                        <span className={selected === game.awayTeam ? 'font-semibold' : ''}>
+                          {team1Meta?.abbreviation ?? game.awayTeam}
+                        </span>
+                        <RankingBadge team={game.awayTeam} rankings={rankings} />
+                      </div>
+                      <span className={`text-xs font-mono ${team1Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                        {team1Pct}%
+                      </span>
+                    </button>
+
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">@</span>
+
+                    <button
+                      onClick={() => onSelectWinner(game.gameKey, game.homeTeam)}
+                      className={`flex-1 flex items-center justify-between gap-2 py-2 px-3 rounded-lg border-2 transition-all ${
+                        selected === game.homeTeam
+                          ? 'border-green-500 bg-green-50 dark:bg-green-500/10'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <TeamLogoFor team={game.homeTeam} teams={teams} size="sm" />
+                        <span className={selected === game.homeTeam ? 'font-semibold' : ''}>
+                          {team2Meta?.abbreviation ?? game.homeTeam}
+                        </span>
+                        <RankingBadge team={game.homeTeam} rankings={rankings} />
+                      </div>
+                      <span className={`text-xs font-mono ${team2Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                        {team2Pct}%
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className={showFloatingCCG ? 'pb-20 md:pb-0' : ''}>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Left Column: Game Picker */}
+    <div className="space-y-6">
+      {/* Game Picker — full width, weeks interleaved into three columns on desktop */}
       <div className="card">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="card-header mb-0 border-0 pb-0">
-            Pick All Conference Game Winners
+          <h2 className="card-header mb-0 border-0 pb-0 flex items-center gap-2">
+            Pick All <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> Conference Game Winners
           </h2>
-          <div className="flex gap-2">
+          <div ref={hideOnExport} className="flex gap-2">
             <button
               onClick={onFillFavorites}
               className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
@@ -123,75 +255,9 @@ export function FullSeasonPicker({
         </div>
 
         <div className="space-y-4">
-          {weekGroups.map((week) => (
-            <div key={week.weekLabel}>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 border-b border-gray-200 dark:border-gray-700 pb-1">
-                {week.weekLabel}
-              </h3>
-              <div className="space-y-3">
-                {week.dateGroups.map((dateGroup) => (
-                  <div key={dateGroup.dateLabel}>
-                    <h4 className="text-xs text-gray-500 dark:text-gray-400 mb-1.5 ml-1">
-                      {dateGroup.dateLabel}
-                    </h4>
-                    <div className="space-y-2">
-                      {dateGroup.games.map((game) => {
-                        const selected = selectedWinners[game.gameKey];
-                        const team1Meta = teams.teams[game.awayTeam];
-                        const team2Meta = teams.teams[game.homeTeam];
-                        const team1Pct = Math.round(game.awayWinProb * 100);
-                        const team2Pct = 100 - team1Pct;
-
-                        return (
-                          <div key={game.gameKey} className="flex items-center gap-2">
-                            <button
-                              onClick={() => onSelectWinner(game.gameKey, game.awayTeam)}
-                              className={`flex-1 flex items-center justify-between gap-2 py-2 px-3 rounded-lg border-2 transition-all ${
-                                selected === game.awayTeam
-                                  ? 'border-green-500 bg-green-50 dark:bg-green-500/10'
-                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <TeamLogoFor team={game.awayTeam} teams={teams} size="sm" />
-                                <span className={selected === game.awayTeam ? 'font-semibold' : ''}>
-                                  {team1Meta?.display_name ?? game.awayTeam}
-                                </span>
-                                <RankingBadge team={game.awayTeam} rankings={rankings} />
-                              </div>
-                              <span className={`text-xs font-mono ${team1Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                                {team1Pct}%
-                              </span>
-                            </button>
-
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">@</span>
-
-                            <button
-                              onClick={() => onSelectWinner(game.gameKey, game.homeTeam)}
-                              className={`flex-1 flex items-center justify-between gap-2 py-2 px-3 rounded-lg border-2 transition-all ${
-                                selected === game.homeTeam
-                                  ? 'border-green-500 bg-green-50 dark:bg-green-500/10'
-                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <TeamLogoFor team={game.homeTeam} teams={teams} size="sm" />
-                                <span className={selected === game.homeTeam ? 'font-semibold' : ''}>
-                                  {team2Meta?.display_name ?? game.homeTeam}
-                                </span>
-                                <RankingBadge team={game.homeTeam} rankings={rankings} />
-                              </div>
-                              <span className={`text-xs font-mono ${team2Pct >= 50 ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                                {team2Pct}%
-                              </span>
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {weekRows.map((row, i) => (
+            <div key={i} className="grid grid-cols-1 lg:grid-cols-3 gap-x-8 gap-y-4 lg:items-start">
+              {row.map(renderWeek)}
             </div>
           ))}
         </div>
@@ -212,11 +278,13 @@ export function FullSeasonPicker({
         </div>
       </div>
 
-      {/* Right Column: CCG Result */}
+      {/* CCG Result */}
       <div className="space-y-6">
         {!allGamesSelected ? (
           <div className="card">
-            <h2 className="card-header">Conference Championship</h2>
+            <h2 className="card-header flex items-center gap-2">
+              <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> Conference Championship
+            </h2>
             <div className="text-gray-500 dark:text-gray-400 text-sm py-8 text-center">
               <p>Select winners for all {totalGames} remaining conference games to see the championship matchup.</p>
               <p className="mt-2">
@@ -224,11 +292,21 @@ export function FullSeasonPicker({
               </p>
             </div>
           </div>
-        ) : tiebreakerResult ? (
-          <>
-            {/* CCG Matchup */}
-            <div className="card">
-              <h2 className="card-header">Conference Championship Game</h2>
+        ) : tiebreakerResult ? (() => {
+          const hasSeedingLog = !!tiebreakerResult.seedingLog && tiebreakerResult.seedingLog.length > 0;
+
+          return (
+          <div
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-start"
+            style={ccgHeight != null ? { gridTemplateRows: `${ccgHeight}px auto` } : undefined}
+          >
+            {/* CCG Matchup — always top-left. Row 1 is pinned to this card's
+                own measured pixel height so the row-spanning Standings/
+                Seeding card can't inflate it and leave a gap below it. */}
+            <div ref={ccgRef} className="card lg:col-start-1 lg:row-start-1">
+              <h2 className="card-header flex items-center gap-2">
+                <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> Conference Championship Game
+              </h2>
               {tiebreakerResult.ccgParticipants ? (
                 <div className="flex items-center justify-center gap-6 py-6">
                   <div className="flex flex-col items-center gap-2">
@@ -237,7 +315,6 @@ export function FullSeasonPicker({
                       {teams.teams[tiebreakerResult.ccgParticipants[0]]?.display_name ?? tiebreakerResult.ccgParticipants[0]}
                     </Link>
                     <RankingBadge team={tiebreakerResult.ccgParticipants[0]} rankings={rankings} />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">#1 Seed</span>
                   </div>
                   <span className="text-gray-400 dark:text-gray-500 text-2xl font-light">vs</span>
                   <div className="flex flex-col items-center gap-2">
@@ -246,7 +323,6 @@ export function FullSeasonPicker({
                       {teams.teams[tiebreakerResult.ccgParticipants[1]]?.display_name ?? tiebreakerResult.ccgParticipants[1]}
                     </Link>
                     <RankingBadge team={tiebreakerResult.ccgParticipants[1]} rankings={rankings} />
-                    <span className="text-xs text-gray-500 dark:text-gray-400">#2 Seed</span>
                   </div>
                 </div>
               ) : (
@@ -261,9 +337,22 @@ export function FullSeasonPicker({
               )}
             </div>
 
-            {/* Conference Standings */}
-            <div className="card">
-              <h2 className="card-header">Conference Standings</h2>
+            {/* Conference Standings — DOM identity (and its ref) stay fixed
+                across renders; only its grid placement (className) toggles,
+                so measuring its height can't feed back into itself. */}
+            <div
+              ref={standingsRef}
+              className={`card ${
+                hasSeedingLog
+                  ? standingsTaller
+                    ? 'lg:col-start-2 lg:row-start-1 lg:row-span-2'
+                    : 'lg:col-start-1 lg:row-start-2'
+                  : 'lg:col-start-2 lg:row-start-1'
+              }`}
+            >
+              <h2 className="card-header flex items-center gap-2">
+                <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> Conference Standings
+              </h2>
               <div className="space-y-1">
                 {(() => {
                   let rankCounter = 1;
@@ -298,17 +387,17 @@ export function FullSeasonPicker({
                             {isTied ? `T${rank}` : rank}.
                           </span>
                           <TeamLogoFor team={teamName} teams={teams} size="sm" />
-                          <Link to={teamPath(conference, teamName, sport, season)} className={`flex-1 hover:underline ${isCCG ? 'font-semibold' : ''}`}>
+                          <Link to={teamPath(conference, teamName, sport, season)} className={`flex-1 flex items-center gap-1.5 hover:underline ${isCCG ? 'font-semibold' : ''}`}>
                             {teamMeta?.display_name ?? teamName}
+                            <RankingBadge team={teamName} rankings={rankings} />
                           </Link>
-                          <RankingBadge team={teamName} rankings={rankings} />
-                          {confRecord && (
-                            <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">{confRecord}</span>
-                          )}
                           {isCCG && (
                             <span className="text-xs bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
                               CCG
                             </span>
+                          )}
+                          {confRecord && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">{confRecord}</span>
                           )}
                         </div>
                       );
@@ -320,17 +409,22 @@ export function FullSeasonPicker({
               </div>
             </div>
 
-            {/* Seeding Explanation */}
-            {tiebreakerResult.seedingLog && tiebreakerResult.seedingLog.length > 0 && (
-              <div className="card">
-                <h2 className="card-header">How Seeds Were Determined</h2>
+            {/* Seeding Explanation — takes whichever spot Standings didn't */}
+            {hasSeedingLog && (
+              <div
+                ref={seedingRef}
+                className={`card ${standingsTaller ? 'lg:col-start-1 lg:row-start-2' : 'lg:col-start-2 lg:row-start-1 lg:row-span-2'}`}
+              >
+                <h2 className="card-header flex items-center gap-2">
+                  <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" /> How Seeds Were Determined
+                </h2>
                 <div className="space-y-4">
-                  {tiebreakerResult.seedingLog.map((log) => (
+                  {/* Non-null: hasSeedingLog already confirmed this is defined and non-empty. */}
+                  {tiebreakerResult.seedingLog!.map((log) => (
                     <div key={log.seed}>
                       <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 flex items-center gap-2">
                         <TeamLogoFor team={log.teamName} teams={teams} size="sm" />
                         #{log.seed} Seed: {teams.teams[log.teamName]?.display_name ?? log.teamName}
-                        <RankingBadge team={log.teamName} rankings={rankings} />
                       </h3>
                       {log.method === 'outright' ? (
                         <p className="text-sm text-gray-600 dark:text-gray-400 ml-7">
@@ -362,7 +456,6 @@ export function FullSeasonPicker({
                                   <span key={t}>
                                     {i > 0 && ', '}
                                     {teams.teams[t]?.display_name ?? t}
-                                    <RankingBadge team={t} rankings={rankings} />
                                   </span>
                                 ))}
                               </div>
@@ -380,7 +473,6 @@ export function FullSeasonPicker({
                                       >
                                         <TeamLogoFor team={t} teams={teams} size="xs" />
                                         <span>{teams.teams[t]?.display_name ?? t}:</span>
-                                        <RankingBadge team={t} rankings={rankings} />
                                         <span className="font-mono">{step.details[t] ?? '—'}</span>
                                         {isAdvancing && <span className="text-green-600 dark:text-green-400">✓</span>}
                                         {isEliminated && <span className="text-red-400">✗</span>}
@@ -398,8 +490,9 @@ export function FullSeasonPicker({
                 </div>
               </div>
             )}
-          </>
-        ) : null}
+          </div>
+          );
+        })() : null}
       </div>
     </div>
 

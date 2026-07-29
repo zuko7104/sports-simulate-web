@@ -2,6 +2,10 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { TeamLogoFor } from './TeamLogo';
 import { TeamName } from './TeamName';
+import { ConferenceLogo } from './ConferenceLogo';
+import { DownloadPngButton } from './DownloadPngButton';
+import { CardExportFooter } from './CardExportFooter';
+import { useExportableCard } from '../hooks/useExportableCard';
 import { teamPath } from '../utils/routes';
 import { isConferenceGame } from '../utils/conferenceGame';
 import type { ResolvedRanking } from '../utils/rankings';
@@ -14,6 +18,7 @@ interface BasicConferenceStandingsProps {
   sport?: string;
   season?: string;
   historicalDate?: string;
+  dataDate?: string | null;
   rankings?: Record<string, ResolvedRanking> | null;
 }
 
@@ -24,7 +29,8 @@ interface BasicConferenceStandingsProps {
  * (overall and conference) sorted by conference win percentage, instead of
  * the full probability/matchup tables used for simulated conferences.
  */
-export function BasicConferenceStandings({ teams, schedules, conference, sport, season = '2025', historicalDate, rankings }: BasicConferenceStandingsProps) {
+export function BasicConferenceStandings({ teams, schedules, conference, sport, season = '2025', historicalDate, dataDate, rankings }: BasicConferenceStandingsProps) {
+  const conferenceMeta = teams.conferences[conference];
   const dateSuffix = historicalDate ? `?date=${historicalDate}` : '';
   const conferenceTeams = teams.conferences[conference]?.teams ?? [];
   const conferenceTeamSet = useMemo(() => new Set(conferenceTeams), [conferenceTeams]);
@@ -69,13 +75,24 @@ export function BasicConferenceStandings({ teams, schedules, conference, sport, 
     return sorted;
   }, [conferenceTeams, conferenceTeamSet, schedules, season]);
 
+  const slug = (conferenceMeta?.abbreviation ?? conference).toLowerCase().replace(/\s+/g, '-');
+  const { contentRef, hideOnExport, brandRef, downloading, handleDownload } = useExportableCard(`${slug}-standings.png`);
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Standings</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          No championship simulation is run for this group — showing current records only.
-        </p>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" ref={contentRef}>
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <ConferenceLogo conference={conference} meta={conferenceMeta} size="sm" />
+            Standings
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No championship simulation is run for this group — showing current records only.
+          </p>
+        </div>
+        <div ref={hideOnExport}>
+          <DownloadPngButton downloading={downloading} onClick={handleDownload} />
+        </div>
       </div>
       <table className="w-full text-sm">
         <thead className="bg-gray-50 dark:bg-gray-900/50 text-left text-gray-600 dark:text-gray-400">
@@ -121,6 +138,11 @@ export function BasicConferenceStandings({ teams, schedules, conference, sport, 
           )}
         </tbody>
       </table>
+      {dataDate && (
+        <div className="px-4 pb-3">
+          <CardExportFooter ref={brandRef} dataDate={dataDate} />
+        </div>
+      )}
     </div>
   );
 }
