@@ -1,0 +1,1 @@
+import{r}from"./utils-ZcA7x1c2.js";import{f as o}from"./knownConferences-DOyXOlsw.js";import{a as t,s as c}from"./routes-BKrY9f9j.js";import"./index-CwL0ytI9.js";import"./dataUrl-BE0BRwCr.js";async function p({params:e}){const n=await o();return!e.legacyConference||!n.has(e.legacyConference)?r(c()):r(t(e.legacyConference,"tiebreakers"))}export{p as clientLoader};

@@ -1,17 +1,17 @@
-# GitHub Actions workflow for the cfb-web deployment repo.
+# Source of truth for sports-simulate-web's own .github/workflows/pages.yml.
+# cfb's .github/workflows/deploy.yml copies this file into sports-simulate-web
+# on every deploy, so edits here take effect automatically on the next push -
+# no manual copying needed.
 #
-# This file lives at web/.github/workflows/pages.yml in the main repo
-# (zuko7104/cfb) and is rsynced into cfb-web/.github/workflows/pages.yml
-# by .github/workflows/deploy.yml on every push to main.
-#
-# Do not edit it in cfb-web directly — edit it in the main repo.
+# sports-simulate-web holds ONLY built static output (dist/client/* pushed
+# by cfb's deploy.yml) - this workflow does no build of its own, it just
+# publishes whatever's currently committed there.
 
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
-  # Allow manual re-deploy from the Actions tab
   workflow_dispatch:
 
 permissions:
@@ -19,41 +19,23 @@ permissions:
   pages: write
   id-token: write
 
-# Only one concurrent deploy; skip queued runs but don't cancel in-progress ones.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-        env:
-          # R2 public bucket URL — set as a repository variable in sports-simulate-web.
-          # Settings → Variables → Actions → New repository variable
-          # Name: VITE_R2_BASE_URL  Value: https://pub-xxxx.r2.dev (sports-simulate-data bucket)
-          VITE_R2_BASE_URL: ${{ vars.VITE_R2_BASE_URL }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: .
 
       - name: Deploy to GitHub Pages
         id: deploy

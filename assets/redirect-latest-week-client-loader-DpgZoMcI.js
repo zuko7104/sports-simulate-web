@@ -1,0 +1,1 @@
+import{r as t}from"./utils-ZcA7x1c2.js";import{w as e,C as o,b as a,D as i}from"./routes-BKrY9f9j.js";import"./index-CwL0ytI9.js";async function c({params:r}){return t(e(i,r.sport??a,r.year??o))}export{c as clientLoader};

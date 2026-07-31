@@ -1,0 +1,1 @@
+import{l as n}from"./pageDataUrl-4Las7AWf.js";async function a({params:e}){const t=await fetch(n(e.sport,e.year,e.week));if(!t.ok)throw new Response("Failed to load conference landing data",{status:t.status});return await t.json()}export{a as clientLoader};
