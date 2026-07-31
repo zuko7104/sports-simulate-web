@@ -1,0 +1,1 @@
+import{d as r}from"./dataUrl-CurIARAy.js";import{b as a,C as c}from"./routes-BKrY9f9j.js";async function p(t=a,n=c){try{const e=await fetch(r(`${t}/${n}/teams.json`));if(!e.ok)return new Set;if(!e.headers.get("content-type")?.includes("application/json"))return new Set;const o=await e.json();return new Set(Object.keys(o?.conferences??{}))}catch{return new Set}}export{p as f};
