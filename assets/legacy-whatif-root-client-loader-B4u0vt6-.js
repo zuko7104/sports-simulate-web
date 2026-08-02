@@ -1,0 +1,1 @@
+import{r}from"./utils-BKeGFmT8.js";import{a as t}from"./routes-BOer-YQY.js";import"./index-CwL0ytI9.js";import"./slug-BfJ8Vq9g.js";async function n(){return r(t("B12","what-if"))}export{n as clientLoader};

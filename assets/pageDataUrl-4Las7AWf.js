@@ -1,1 +1,0 @@
-function u(n,a,t,e){return`page-data/${n}/${a}/${t}/${encodeURIComponent(e)}/bundle.json`}function l(n,a,t,e){return`/${u(n,a,t,e)}`}function d(n,a,t){return`page-data/${n}/${a}/${t}/landing.json`}function r(n,a,t){return`/${d(n,a,t)}`}export{l as b,r as l};

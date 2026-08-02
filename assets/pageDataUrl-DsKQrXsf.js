@@ -1,0 +1,1 @@
+import{s as r}from"./slug-BfJ8Vq9g.js";function e(n,a,t,u){return`page-data/${n}/${a}/${t}/${r(u)}/bundle.json`}function d(n,a,t,u){return`/${e(n,a,t,u)}`}function l(n,a,t){return`page-data/${n}/${a}/${t}/landing.json`}function i(n,a,t){return`/${l(n,a,t)}`}export{d as b,i as l};
