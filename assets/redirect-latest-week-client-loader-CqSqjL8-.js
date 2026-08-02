@@ -1,1 +1,0 @@
-import{r as t}from"./utils-BKeGFmT8.js";import{w as o,C as e,b as a,D as i}from"./routes-BOer-YQY.js";import"./index-CwL0ytI9.js";import"./slug-BfJ8Vq9g.js";async function p({params:r}){return t(o(i,r.sport??a,r.year??e))}export{p as clientLoader};

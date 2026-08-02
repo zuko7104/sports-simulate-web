@@ -1,1 +1,0 @@
-import{r}from"./utils-BKeGFmT8.js";import{a as e}from"./routes-BOer-YQY.js";import"./index-CwL0ytI9.js";import"./slug-BfJ8Vq9g.js";async function n(){return r(e("B12","tiebreakers"))}export{n as clientLoader};
