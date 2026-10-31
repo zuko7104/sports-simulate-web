@@ -1,0 +1,1 @@
+import{a as t}from"./index-CwL0ytI9.js";const r="cfb-theme",n=t.createContext(null);function i(){if(typeof window>"u")return"dark";const e=window.localStorage.getItem(r);return e==="light"||e==="dark"?e:"dark"}function s(){const e=t.useContext(n);if(!e)throw new Error("useTheme must be used within a ThemeProvider");return e}export{n as T,i as g,s as u};

@@ -1,0 +1,1 @@
+import"./jsx-runtime-u17CrQMm.js";import{a as e}from"./index-CwL0ytI9.js";function f({slotId:o,format:s="auto",minHeight:n=280,className:r=""}){e.useRef(null);const[t,a]=e.useState(!1);return e.useEffect(()=>{},[]),e.useEffect(()=>{t&&(window.adsbygoogle=window.adsbygoogle||[]).push({})},[t]),null}export{f as A};

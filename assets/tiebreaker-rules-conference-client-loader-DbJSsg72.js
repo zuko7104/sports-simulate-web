@@ -1,0 +1,1 @@
+import{r as n,l as r}from"./latestWeek-vBdjgEHD.js";import{a}from"./routes-Jzaaomms.js";import"./dateUtils-CjFAZbxm.js";async function l({params:e}){const o=await n(e.sport,e.year,a),t=await fetch(r(e.sport,e.year,o));if(!t.ok)throw new Response("Failed to load conference data",{status:t.status});return(await t.json()).conferences}export{l as clientLoader};
