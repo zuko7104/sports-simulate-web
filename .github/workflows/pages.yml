@@ -1,0 +1,42 @@
+# Source of truth for sports-simulate-web's own .github/workflows/pages.yml.
+# cfb's .github/workflows/deploy.yml copies this file into sports-simulate-web
+# on every deploy, so edits here take effect automatically on the next push -
+# no manual copying needed.
+#
+# sports-simulate-web holds ONLY built static output (dist/client/* pushed
+# by cfb's deploy.yml) - this workflow does no build of its own, it just
+# publishes whatever's currently committed there.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
