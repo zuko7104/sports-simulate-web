@@ -1,0 +1,1 @@
+const e=new Set(["ACC","B10","B12","SEC"]),s=new Set(["AAC","CUSA","MAC","MWC","SBC","P12"]),t="FBS Independents",r=["p4","g6","independents","fcs"],S={p4:"Power 4",g6:"Group of 6",independents:"FBS Independents",fcs:"FCS"};function C(n){return e.has(n)?"p4":s.has(n)?"g6":n===t?"independents":"fcs"}export{r as G,S as a,C as c};
